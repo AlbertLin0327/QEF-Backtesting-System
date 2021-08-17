@@ -104,18 +104,22 @@ def proccessor_date_to_id(df: pd.DataFrame) -> pd.DataFrame:
 
     # Change date_ and db_timestamp string to datetime format
     df["date_"] = pd.to_datetime(df["date_"], format="%Y-%m-%d")
-    df["db_timestamp"] = pd.to_datetime(df["db_timestamp"], format="%Y-%m-%d %H:%M:%S.%f")
+    df["db_timestamp"] = pd.to_datetime(
+        df["db_timestamp"], format="%Y-%m-%d %H:%M:%S.%f"
+    )
 
     # Change price to float type
-    df['high_'] = df['high_'].apply(float)
-    df['low_'] = df['low_'].apply(float)
-    df['open_'] = df['open_'].apply(float)
-    df['close_'] = df['close_'].apply(float)
-    df['volume_'] = df['volume_'].apply(float)
-    df['adj_close_'] = df['adj_close_'].apply(float)
+    df["high_"] = df["high_"].apply(float)
+    df["low_"] = df["low_"].apply(float)
+    df["open_"] = df["open_"].apply(float)
+    df["close_"] = df["close_"].apply(float)
+    df["volume_"] = df["volume_"].apply(float)
+    df["adj_close_"] = df["adj_close_"].apply(float)
 
     # Group by date and extract thir id
-    data = df.groupby(pd.Grouper(key="date_", freq="1d"))['id'].apply(list).reset_index()
+    data = (
+        df.groupby(pd.Grouper(key="date_", freq="1d"))["id"].apply(list).reset_index()
+    )
 
     # Remove empty date
     data = data[data.id.str.len() != 0]
@@ -123,7 +127,7 @@ def proccessor_date_to_id(df: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def save_df_as_parquet(df: pd.DataFrame, path: str, chunksize: int=10000) -> None:
+def save_df_as_parquet(df: pd.DataFrame, path: str, chunksize: int = 10000) -> None:
     """
     Convert dataframe to parquet file
 
@@ -142,11 +146,13 @@ def save_df_as_parquet(df: pd.DataFrame, path: str, chunksize: int=10000) -> Non
     """
 
     # Transform dataframe to dask.dataframe and store as parquet
-    ddf = da.from_pandas(df, chunksize=chunksize); 
+    ddf = da.from_pandas(df, chunksize=chunksize)
     ddf.to_parquet(path)
 
 
-def save_prices_file(df: pd.DataFrame, table: pd.DataFrame, path: str=DATASET, chunksize: int=5000) -> None:
+def save_prices_file(
+    df: pd.DataFrame, table: pd.DataFrame, path: str = DATASET, chunksize: int = 5000
+) -> None:
     """
     Convert price-volume dataframe to parquet file into time structure folder
 
@@ -171,14 +177,22 @@ def save_prices_file(df: pd.DataFrame, table: pd.DataFrame, path: str=DATASET, c
         for index, data in tqdm(table.iterrows()):
 
             # Filter desired data out of dataframe
-            filtered_df = df.loc[df['id'].isin(data['id'])].set_index('id')
+            filtered_df = (
+                df.loc[df["id"].isin(data["id"])].set_index("id").reset_index()
+            )
 
             # Parse date for folder structure formatting
-            date_str = data['date_'].date()
-            year, month, date = date_str.strftime('%Y'), date_str.strftime('%m'), date_str.strftime('%d')
-            
+            date_str = data["date_"].date()
+            year, month, date = (
+                date_str.strftime("%Y"),
+                date_str.strftime("%m"),
+                date_str.strftime("%d"),
+            )
+
             # Save the filtered dataframe to parquet file
-            save_df_as_parquet(filtered_df, f'{path}/Price-Volume/{year}/{month}/{date}/', chunksize)
+            save_df_as_parquet(
+                filtered_df, f"{path}/Price-Volume/{year}/{month}/{date}/", chunksize
+            )
 
             # Update tqdm
             pbar.update(1)
@@ -191,12 +205,12 @@ def main():
     print(args)
 
     # Open mapping.csv and save as parquet file
-    print('--- Start Processing mapping.csv and save as parquet ---')
+    print("--- Start Processing mapping.csv and save as parquet ---")
     mapping = read_csv_file(args.input_mapping, ["vendor_timestamp"])
-    save_df_as_parquet(mapping, args.output + '/mapping', 15000)
+    save_df_as_parquet(mapping, args.output + "/mapping", 15000)
 
     # Save mapping file
-    print('--- Start Processing pricevol.csv and save as parquet ---')
+    print("--- Start Processing pricevol.csv and save as parquet ---")
     price_vol = read_csv_file(args.input_price_volume, ["vendor_timestamp"])
 
     # Turn to (date: [id]) pair dataframe
@@ -205,7 +219,7 @@ def main():
     # Save the processed filefile as parquet
     save_prices_file(price_vol, date_id, args.output)
 
-    print('--- End Processing ---')
+    print("--- End Processing ---")
 
 
 # Execute main function
