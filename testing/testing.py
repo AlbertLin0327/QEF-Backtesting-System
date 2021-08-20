@@ -2,46 +2,46 @@
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import datetime
 
 def fetch(file_path): 
     # Read the file and transform to pandas.data_form
     data = pq.read_table(source=file_path).to_pandas()
     return data
 
-def search(price_vol, year, month, day): 
+def fetcher(price_vol: dict, date: datetime): 
     # return the price information for the given date
     try:
-        return price_vol[f"{year}-{month:02}-{day:02}"]
+        return price_vol[date.strftime('%Y-%m-%d')]
     except:
         print("invalid date")
         return None
 
-def search_interval(price_vol, start, end):
-    # return all the information from start_date to end_date
-    data = []
-    for year in range(start[0], end[0] + 1):
-        for month in range(1, 13):
-            for day in range(1, 32):
-                if f'{start[0]}-{start[1]:02}-{start[2]:02}' <= f'{year}-{month:02}-{day:02}' <= f'{end[0]}-{end[1]:02}-{end[2]:02}':
-                    try:
-                        data.append(price_vol[f"{year}-{month:02}-{day:02}"])
-                    except:
-                        continue
-    return data
+def engine(price_vol: dict, start: datetime, end: datetime, current_holding):
+    cur_holding, cur_pnl = manager()
+    delta = datetime.timedelta(days=1)
+    while start <= end:
+        data = fetcher(price_vol, start)
+        if data != None:
+            sendbox(data, cur_holding)
+        start += delta
 
-def main():
+def init():
     print('transforming parquet to data array.')
     mapping = []
     for i in range(4):
         mapping.append(fetch(f"../Dataset/mapping/part.{i}.parquet"))
     price_vol = {}
-    for year in range(1981, 2021):
-        for month in range(1, 13):
-            for day in range(1, 32):
-                try:
-                    price_vol[f"{year}-{month:02}-{day:02}"] = fetch(f"../Dataset/Price-Volume/{year}/{month:02}/{day:02}")
-                except:
-                    continue
+    start_date = datetime.date(1981, 1, 5)
+    end_date = datetime.date(2020, 12, 31)
+    delta = datetime.timedelta(days=1)
+    while start_date <= end_date:
+        try:
+            price_vol[start_date.strftime('%Y-%m-%d')] = fetch(f"../Dataset/Price-Volume/" + start_date.strftime('%Y/%m/%d'))
+        except:
+            print("No such file")
+        finally:
+            start_date += delta
 
 if __name__ == "__main__":
-    main()
+    init()
