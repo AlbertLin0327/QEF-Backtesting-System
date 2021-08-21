@@ -1,7 +1,5 @@
 # import necessary libraries
 import pandas as pd
-import pyarrow as pa
-import pyarrow.parquet as pq
 import datetime
 import pandas as pd
 import numpy as np
@@ -46,7 +44,7 @@ def sendbox(data: pd.DataFrame, assets):
 def fetch(file_path):
 
     # Read the file and transform to pandas.data_form
-    data = pq.read_table(source=file_path).to_pandas()
+    data = pd.read_parquet(file_path)
     return data
 
 
