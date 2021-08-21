@@ -27,21 +27,20 @@ def plot(assets, years):
     fig.savefig("PnL.png")
 
 
-def sendbox(data: pd.DataFrame, cur_holdings):
+def sendbox(data: pd.DataFrame, assets):
 
-    # Random buy some stock at the opening and sell at the closing
-    if cur_holdings is None:
-        asset = 10000
-    else:
-        asset = sum(cur_holdings * data[-2]["close_"])
-
-    current_holdings = (
-        asset * np.random.dirichlet(np.ones(len(data[-1]))) / data[-1]["open_"]
+    # Random buy and short some stock on dollar neutral
+    newAsset = (
+        sum(
+            assets
+            * (np.random.dirichlet(np.ones(len(data[-1]))) - 1 / len(data[-1]))
+            / data[-1]["open_"]
+            * (data[-1]["close_"])
+        )
+        + assets
     )
 
-    newAsset = sum(current_holdings * (data[-1]["close_"]))
-
-    return current_holdings, newAsset
+    return newAsset
 
 
 def fetch(file_path):
@@ -65,7 +64,7 @@ def engine(price_vol: dict, start: datetime, end: datetime):
     # The main part of the engine component
     delta = datetime.timedelta(days=1)
 
-    data, years, assets, current_holdings = [], [], [], None
+    data, years, assets, current_asset = [], [], [], 100000
 
     while start <= end:
 
@@ -75,7 +74,7 @@ def engine(price_vol: dict, start: datetime, end: datetime):
         if current_data is not None:
             years.append(start)
             data.append(current_data)
-            current_holdings, current_asset = sendbox(data, current_holdings)
+            current_asset = sendbox(data, current_asset)
             assets.append(current_asset)
 
         start += delta
@@ -92,7 +91,7 @@ def init():
     price_vol = {}
 
     # Looping through the date
-    start_date = datetime.date(1981, 1, 5)
+    start_date = datetime.date(2018, 1, 5)
     end_date = datetime.date(2020, 12, 31)
     delta = datetime.timedelta(days=1)
 
@@ -110,7 +109,7 @@ def init():
     print("--- Start Engine ---")
 
     # Start the engine
-    engine(price_vol, datetime.date(1981, 1, 5), datetime.date(2020, 12, 31))
+    engine(price_vol, datetime.date(2018, 1, 5), datetime.date(2020, 12, 31))
 
 
 if __name__ == "__main__":
