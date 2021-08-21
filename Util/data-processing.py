@@ -87,6 +87,31 @@ def read_csv_file(
     return data
 
 
+def cleanse(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Strip 0.0 (nan) out of the dataframe
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        The original dataframe of pricevol
+
+    Returns
+    -------
+    pd.DataFrame
+        The stripped pricevol
+    """
+
+    # clear 0.0 out of the dataframe
+    df = df[df.open_ != 0.0]
+    df = df[df.close_ != 0.0]
+    df = df[df.high_ != 0.0]
+    df = df[df.low_ != 0.0]
+    df = df[df.adj_close_ != 0.0]
+
+    return df
+
+
 def proccessor_date_to_id(df: pd.DataFrame) -> pd.DataFrame:
     """
     Categorize by date and store the id fields. Also, apply some type trandformation on them
@@ -212,6 +237,9 @@ def main():
     # Save mapping file
     print("--- Start Processing pricevol.csv and save as parquet ---")
     price_vol = read_csv_file(args.input_price_volume, ["vendor_timestamp"])
+
+    # Clean price volume file
+    price_vol = cleanse(price_vol)
 
     # Turn to (date: [id]) pair dataframe
     date_id = proccessor_date_to_id(price_vol)
