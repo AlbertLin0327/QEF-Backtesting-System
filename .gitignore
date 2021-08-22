@@ -1,0 +1,9 @@
+# git ignore file list
+
+# Sensetive Data
+/raw_data
+/Dataset
+
+# exception
+!Dataset/.gitkeep 
+
