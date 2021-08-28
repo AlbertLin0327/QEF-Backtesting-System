@@ -25,7 +25,7 @@ def plot(assets, years):
     fig.savefig("PnL.png")
 
 
-def sendbox(data: pd.DataFrame, assets):
+def sandbox(data: pd.DataFrame, assets):
 
     # Random buy and short some stock on dollar neutral
     newAsset = (
@@ -72,7 +72,7 @@ def engine(price_vol: dict, start: datetime, end: datetime):
         if current_data is not None:
             years.append(start)
             data.append(current_data)
-            current_asset = sendbox(data, current_asset)
+            current_asset = sandbox(data, current_asset)
             assets.append(current_asset)
 
         start += delta
