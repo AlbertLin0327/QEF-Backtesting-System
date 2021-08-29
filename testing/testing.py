@@ -4,41 +4,154 @@ import datetime
 import pandas as pd
 import numpy as np
 import matplotlib
+import talib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-def plot(assets, years):
+# MA Cross Strategy
+class Strategy:
 
-    fig = plt.figure(figsize=(10, 10))
+    # Parameters setting
+    def __init__(self):
+        self.ticker_window = {}
+        self.ma_long = 63
+        self.ma_short = 10
+        self.betting = 100000
 
-    # plot the assets curve
-    plt.title("Assets curve")
-    plt.xlabel("Time")
-    plt.ylabel("Assets")
+    # Find the price window
+    def window(self, data):
 
-    # draw the fitting curve
-    plt.plot(years, assets)
+        # Go through all entry
+        for _, row in data.iterrows():
+            ticker = row["identifier"]
 
-    # plt.show()
-    fig.savefig("PnL.png")
+            # Add ticker to the window
+            if ticker not in self.ticker_window.keys():
+                self.ticker_window[ticker] = np.array([row["adj_close_"]])
+            else:
+                self.ticker_window[ticker] = np.append(
+                    self.ticker_window[ticker], row["adj_close_"]
+                )
+
+            # Trim to an adequate size of window
+            self.ticker_window[ticker] = self.ticker_window[ticker][
+                -(self.ma_long + 1) :
+            ]
+
+    # Main trading function
+    def trade_asset(self, data, holding):
+
+        # Find window
+        self.window(data)
+
+        # Find the action of every stock
+        dicision = {}
+        short_position, long_position = 0, 0
+
+        # Iterate through all stock
+        for _, row in data.iterrows():
+            ticker = row["identifier"]
+
+            # Get rid of invalid entry
+            if (
+                ticker not in self.ticker_window
+                or len(self.ticker_window[ticker]) < self.ma_long
+            ):
+                continue
+
+            # Find short and long MA
+            short_price = talib.SMA(self.ticker_window[ticker], self.ma_short)[-1]
+            long_price = talib.SMA(self.ticker_window[ticker], self.ma_long)[-1]
+
+            # When short MA < long MA and previous position is long ==> short sell
+            if short_price > long_price and (
+                ticker not in holding or holding[ticker]["position"] == "LONG"
+            ):
+                dicision[ticker] = "SHORT"
+                short_position += 1
+
+            # When short MA > long MA and previous position is short ==> long buy
+            elif short_price < long_price and (
+                ticker not in holding or holding[ticker]["position"] == "SHORT"
+            ):
+                dicision[ticker] = "LONG"
+                long_position += 1
+
+            # If not fulfuill the condition than hold
+            else:
+                dicision[ticker] = "HOLD"
+
+        # Calculate new position
+        new_holding = {}
+
+        if dicision != {} and not (short_position == 0 and long_position == 0):
+
+            # Iterate all dicision
+            for ticker in dicision:
+                price = data.loc[data["identifier"] == ticker]["adj_close_"].values[0]
+
+                # Keep same position if hold
+                if dicision[ticker] == "HOLD":
+                    if ticker in holding:
+                        new_holding[ticker] = holding[ticker]
+                    else:
+                        new_holding[ticker] = {
+                            "price": price,
+                            "amount": 0,
+                            "position": "HOLD",
+                        }
+
+                # Short sell and make the amout negative
+                elif dicision[ticker] == "SHORT":
+
+                    new_holding[ticker] = {
+                        "price": price,
+                        "amount": -(self.betting / short_position) / price,
+                        "position": "SHORT",
+                    }
+
+                # Long an stock
+                elif dicision[ticker] == "LONG":
+
+                    new_holding[ticker] = {
+                        "price": price,
+                        "amount": (self.betting / long_position) / price,
+                        "position": "LONG",
+                    }
+
+        return new_holding, dicision
 
 
-def sandbox(data: pd.DataFrame, assets):
+def sandbox(strategy, data: pd.DataFrame, holding):
 
-    # Random buy and short some stock on dollar neutral
-    newAsset = (
-        sum(
-            assets
-            * (np.random.dirichlet(np.ones(len(data[-1]))) - 1 / len(data[-1]))
-            / data[-1]["open_"]
-            * (data[-1]["close_"])
-        )
-        + assets
-    )
+    # Get the newset holdings and dicisions
+    new_holding, dicision = strategy.trade_asset(data, holding)
+    short_PnL, long_PnL = 0, 0
 
-    return newAsset
+    if holding != {}:
+
+        # Find all tickers and Calculate PnL
+        for ticker in holding:
+
+            # Do nothing if hold
+            if ticker not in dicision or dicision[ticker] == "HOLD":
+                continue
+
+            # Calculate PnL of previous short position
+            elif holding[ticker]["position"] == "SHORT" and dicision[ticker] == "LONG":
+                short_PnL += holding[ticker]["amount"] * (
+                    new_holding[ticker]["price"] - holding[ticker]["price"]
+                )
+
+            # Calculate PnL of previous long position
+            elif holding[ticker]["position"] == "LONG" and dicision[ticker] == "SHORT":
+                long_PnL += holding[ticker]["amount"] * (
+                    new_holding[ticker]["price"] - holding[ticker]["price"]
+                )
+
+    return long_PnL, short_PnL, new_holding
 
 
 def fetch(file_path):
@@ -57,12 +170,33 @@ def fetcher(price_vol: dict, date: datetime):
         return None
 
 
+# Plotting functions
+def plot(assets, years, title, ylabel):
+
+    fig = plt.figure(figsize=(10, 10))
+
+    # plot the assets curve
+    plt.title(title)
+    plt.xlabel("Time")
+    plt.ylabel(ylabel)
+
+    # draw the fitting curve
+    plt.plot(years, assets)
+
+    # plt.show()
+    fig.savefig("image/" + title.replace(" ", "_"))
+
+
 def engine(price_vol: dict, start: datetime, end: datetime):
 
     # The main part of the engine component
     delta = datetime.timedelta(days=1)
 
-    data, years, assets, current_asset = [], [], [], 100000
+    data, years, current_holdings = [], [], {}
+
+    assets, long_pnl, short_pnl = [], [], []
+
+    ma_cross = Strategy()
 
     while start <= end:
 
@@ -71,14 +205,24 @@ def engine(price_vol: dict, start: datetime, end: datetime):
 
         if current_data is not None:
             years.append(start)
-            data.append(current_data)
-            current_asset = sandbox(data, current_asset)
-            assets.append(current_asset)
+            long_asset, short_asset, current_holdings = sandbox(
+                ma_cross, current_data, current_holdings
+            )
+            assets.append(long_asset + short_asset)
+            long_pnl.append(long_asset)
+            short_pnl.append(short_asset)
 
         start += delta
 
-    # plot assets curve
-    plot(assets, years)
+    # plot PnL curve
+    plot(assets, years, "Total PnL", "PnL")
+    plot(long_pnl, years, "Long PnL", "PnL")
+    plot(short_pnl, years, "Short PnL", "PnL")
+
+    # plot PnL curve
+    plot(np.cumsum(assets), years, "Total Assets", "Assets")
+    plot(np.cumsum(long_pnl), years, "Long Assets", "Assets")
+    plot(np.cumsum(short_pnl), years, "Short Assets", "Assets")
 
 
 def init():
@@ -89,7 +233,7 @@ def init():
     price_vol = {}
 
     # Looping through the date
-    start_date = datetime.date(2018, 1, 5)
+    start_date = datetime.date(2016, 1, 1)
     end_date = datetime.date(2020, 12, 31)
     delta = datetime.timedelta(days=1)
 
@@ -107,7 +251,7 @@ def init():
     print("--- Start Engine ---")
 
     # Start the engine
-    engine(price_vol, datetime.date(2018, 1, 5), datetime.date(2020, 12, 31))
+    engine(price_vol, datetime.date(2016, 1, 1), datetime.date(2020, 12, 31))
 
 
 if __name__ == "__main__":
