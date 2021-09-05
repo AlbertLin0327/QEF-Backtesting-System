@@ -4,79 +4,20 @@ import datetime
 import pandas as pd
 import numpy as np
 import matplotlib
-
-# import talib
-import os
+import talib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-### Constant ###
-TC_RATE = 0.0025
-TAIWAN_50 = [
-    "0050",
-    "1101",
-    "1102",
-    "1216",
-    "1301",
-    "1303",
-    "1326",
-    "1402",
-    "1590",
-    "2002",
-    "2207",
-    "2227",
-    "2303",
-    "2308",
-    "2317",
-    "2327",
-    "2330",
-    "2352",
-    "2357",
-    "2379",
-    "2382",
-    "2395",
-    "2408",
-    "2409",
-    "2412",
-    "2454",
-    "2603",
-    "2609",
-    "2610",
-    "2615",
-    "2801",
-    "2880",
-    "2881",
-    "2882",
-    "2884",
-    "2885",
-    "2886",
-    "2887",
-    "2891",
-    "2892",
-    "2912",
-    "3008",
-    "3034",
-    "3045",
-    "3711",
-    "4904",
-    "4938",
-    "5871",
-    "5876",
-    "5880",
-    "6415",
-    "6505",
-    "8046",
-    "9910",
-]
 
-### Mean Reversal Strategy
+# MA Cross Strategy
 class Strategy:
 
     # Parameters setting
     def __init__(self):
         self.ticker_window = {}
-        self.period = 21
+        self.ma_long = 63
+        self.ma_short = 10
         self.betting = 100000
 
     # Find the price window
@@ -96,69 +37,53 @@ class Strategy:
 
             # Trim to an adequate size of window
             self.ticker_window[ticker] = self.ticker_window[ticker][
-                -(self.period + 1) :
+                -(self.ma_long + 1) :
             ]
-
-    # Calculate the cumulative return of all the stocks
-    def count_cumulative_return(self):
-        cum_ret = []
-        p = 0
-        for ticker in self.ticker_window.keys():
-            if len(self.ticker_window[ticker]) < self.period:
-                continue
-            else:
-                cum = 0
-                for i in range(1, self.period):
-                    cum += (
-                        self.ticker_window[ticker][i - 1]
-                        / self.ticker_window[ticker][i]
-                    )
-                cum_ret.append([cum, ticker])
-        cum_ret = sorted(cum_ret, key=lambda cr: cr[0])
-        return cum_ret
 
     # Main trading function
     def trade_asset(self, data, holding):
 
-        # Fill the window
+        # Find window
         self.window(data)
 
-        # count the cumulative return and sort it
-        cum_ret = self.count_cumulative_return()
-        # Decide the action of every stock
+        # Find the action of every stock
         dicision = {}
         short_position, long_position = 0, 0
-        short_list = {}
-        long_list = {}
-        if len(cum_ret) >= 20:
-            for i in range(10):
-                short_list[cum_ret[-(i + 1)][1]] = -(i + 1)
-                long_list[cum_ret[i][1]] = i
-            # print(long_list)
-            # print(short_list)
+
         # Iterate through all stock
         for _, row in data.iterrows():
             ticker = row["identifier"]
 
-            # Get rid of invalid data
-            if ticker not in self.ticker_window.keys() or len(cum_ret) < 20:
+            # Get rid of invalid entry
+            if (
+                ticker not in self.ticker_window
+                or len(self.ticker_window[ticker]) < self.ma_long
+            ):
                 continue
 
-            if ticker in short_list and (
-                ticker not in holding or holding[ticker]["position"] > 0
+            # Find short and long MA
+            short_price = talib.SMA(self.ticker_window[ticker], self.ma_short)[-1]
+            long_price = talib.SMA(self.ticker_window[ticker], self.ma_long)[-1]
+
+            # When short MA < long MA and previous position is long ==> short sell
+            if short_price > long_price and (
+                ticker not in holding or holding[ticker]["position"] == "LONG"
             ):
-                dicision[ticker] = -1
+                dicision[ticker] = "SHORT"
                 short_position += 1
 
-            elif ticker in long_list and (
-                ticker not in holding or holding[ticker]["position"] < 0
+            # When short MA > long MA and previous position is short ==> long buy
+            elif short_price < long_price and (
+                ticker not in holding or holding[ticker]["position"] == "SHORT"
             ):
-                dicision[ticker] = 1
+                dicision[ticker] = "LONG"
                 long_position += 1
 
+            # If not fulfuill the condition than hold
             else:
-                dicision[ticker] = 0
+                dicision[ticker] = "HOLD"
 
+        # Calculate new position
         new_holding = {}
 
         if dicision != {} and not (short_position == 0 and long_position == 0):
@@ -168,85 +93,65 @@ class Strategy:
                 price = data.loc[data["identifier"] == ticker]["adj_close_"].values[0]
 
                 # Keep same position if hold
-                if dicision[ticker] == 0:
+                if dicision[ticker] == "HOLD":
                     if ticker in holding:
                         new_holding[ticker] = holding[ticker]
                     else:
                         new_holding[ticker] = {
                             "price": price,
                             "amount": 0,
-                            "position": 0,
+                            "position": "HOLD",
                         }
 
                 # Short sell and make the amout negative
-                elif dicision[ticker] == -1:
+                elif dicision[ticker] == "SHORT":
 
                     new_holding[ticker] = {
                         "price": price,
                         "amount": -(self.betting / short_position) / price,
-                        "position": -1,
+                        "position": "SHORT",
                     }
 
                 # Long an stock
-                elif dicision[ticker] == 1:
+                elif dicision[ticker] == "LONG":
 
                     new_holding[ticker] = {
                         "price": price,
                         "amount": (self.betting / long_position) / price,
-                        "position": 1,
+                        "position": "LONG",
                     }
+
         return new_holding, dicision
 
 
-def sandbox(strategy, data: pd.DataFrame, holding, end):
+def sandbox(strategy, data: pd.DataFrame, holding):
 
     # Get the newset holdings and dicisions
     new_holding, dicision = strategy.trade_asset(data, holding)
-    short_PnL, long_PnL, transaction_cost = 0, 0, 0
+    short_PnL, long_PnL = 0, 0
 
     if holding != {}:
-
-        transaction_cost = 0
 
         # Find all tickers and Calculate PnL
         for ticker in holding:
 
             # Do nothing if hold
-            if ticker not in dicision or dicision[ticker] == 0:
+            if ticker not in dicision or dicision[ticker] == "HOLD":
                 continue
 
             # Calculate PnL of previous short position
-            elif holding[ticker]["position"] == -1 and dicision[ticker] == 1:
-
+            elif holding[ticker]["position"] == "SHORT" and dicision[ticker] == "LONG":
                 short_PnL += holding[ticker]["amount"] * (
                     new_holding[ticker]["price"] - holding[ticker]["price"]
                 )
 
-                transaction_cost += abs(
-                    (holding[ticker]["amount"] - new_holding[ticker]["amount"])
-                    * new_holding[ticker]["price"]
-                    * TC_RATE
-                )
-
             # Calculate PnL of previous long position
-            elif holding[ticker]["position"] == 1 and dicision[ticker] == -1:
-
+            elif holding[ticker]["position"] == "LONG" and dicision[ticker] == "SHORT":
                 long_PnL += holding[ticker]["amount"] * (
                     new_holding[ticker]["price"] - holding[ticker]["price"]
                 )
 
-                transaction_cost += abs(
-                    (holding[ticker]["amount"] - new_holding[ticker]["amount"])
-                    * new_holding[ticker]["price"]
-                    * TC_RATE
-                )
-
-    return (
-        long_PnL - transaction_cost,
-        short_PnL - transaction_cost,
-        new_holding,
-        transaction_cost,
-    )
+    return long_PnL, short_PnL, new_holding
 
 
 def fetch(file_path):
@@ -266,7 +171,7 @@ def fetcher(price_vol: dict, date: datetime):
 
 
 # Plotting functions
-def plot(assets, years, path, title, ylabel):
+def plot(assets, years, title, ylabel):
 
     fig = plt.figure(figsize=(10, 10))
 
@@ -279,7 +184,7 @@ def plot(assets, years, path, title, ylabel):
     plt.plot(years, assets)
 
     # plt.show()
-    fig.savefig(path + "/" + title.replace(" ", "_"))
+    fig.savefig("image/" + title.replace(" ", "_"))
 
 
 def engine(price_vol: dict, start: datetime, end: datetime):
@@ -291,12 +196,7 @@ def engine(price_vol: dict, start: datetime, end: datetime):
 
     assets, long_pnl, short_pnl = [], [], []
 
-    transaction_cost = []
-
     ma_cross = Strategy()
-
-    path = "./image/" + start.strftime("%Y-%m-%d") + "~" + end.strftime("%Y-%m-%d")
-    os.mkdir(path)
 
     while start <= end:
 
@@ -305,29 +205,24 @@ def engine(price_vol: dict, start: datetime, end: datetime):
 
         if current_data is not None:
             years.append(start)
-            long_asset, short_asset, current_holdings, cost = sandbox(
-                ma_cross, current_data, current_holdings, start == end
+            long_asset, short_asset, current_holdings = sandbox(
+                ma_cross, current_data, current_holdings
             )
-            # print(long_asset, short_asset)
             assets.append(long_asset + short_asset)
             long_pnl.append(long_asset)
             short_pnl.append(short_asset)
-            transaction_cost.append(cost)
 
         start += delta
 
     # plot PnL curve
-    plot(assets, years, path, "Total PnL", "PnL")
-    plot(long_pnl, years, path, "Long PnL", "PnL")
-    plot(short_pnl, years, path, "Short PnL", "PnL")
+    plot(assets, years, "Total PnL", "PnL")
+    plot(long_pnl, years, "Long PnL", "PnL")
+    plot(short_pnl, years, "Short PnL", "PnL")
 
     # plot PnL curve
-    plot(np.cumsum(assets), years, path, "Total Assets", "Assets")
-    plot(np.cumsum(long_pnl), years, path, "Long Assets", "Assets")
-    plot(np.cumsum(short_pnl), years, path, "Short Assets", "Assets")
-
-    # Transaction Cost
-    plot(transaction_cost, years, path, "Accumulate Transaction Cost", "TC")
+    plot(np.cumsum(assets), years, "Total Assets", "Assets")
+    plot(np.cumsum(long_pnl), years, "Long Assets", "Assets")
+    plot(np.cumsum(short_pnl), years, "Short Assets", "Assets")
 
 
 def init():
@@ -346,8 +241,7 @@ def init():
     while start_date <= end_date:
         try:
             price_vol[start_date.strftime("%Y-%m-%d")] = fetch(
-                f"../Dataset/Universe/Taiwan_50/Price-Volume/"
-                + start_date.strftime("%Y/%m/%d")
+                f"../Dataset/Price-Volume/" + start_date.strftime("%Y/%m/%d")
             )
         except:
             pass
@@ -357,7 +251,7 @@ def init():
     print("--- Start Engine ---")
 
     # Start the engine
-    engine(price_vol, datetime.date(2018, 1, 1), datetime.date(2020, 12, 31))
+    engine(price_vol, datetime.date(2016, 1, 1), datetime.date(2020, 12, 31))
 
 
 if __name__ == "__main__":
