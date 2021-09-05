@@ -1,6 +1,6 @@
 # import necessary libraries
 import pandas as pd
-import datetime
+import datetime as dt
 import pandas as pd
 import numpy as np
 import matplotlib
@@ -12,7 +12,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 ### Constant ###
-TC_RATE = 0.0025
+TC_RATE = 0.0
 TAIWAN_50 = [
     "0050",
     "1101",
@@ -125,23 +125,26 @@ class Strategy:
 
         # count the cumulative return and sort it
         cum_ret = self.count_cumulative_return()
+
         # Decide the action of every stock
         dicision = {}
         short_position, long_position = 0, 0
         short_list = {}
         long_list = {}
-        if len(cum_ret) >= 20:
-            for i in range(10):
+
+        porportion = len(cum_ret) // 5
+
+        if porportion > 0:
+            for i in range(porportion):
                 short_list[cum_ret[-(i + 1)][1]] = -(i + 1)
                 long_list[cum_ret[i][1]] = i
-            # print(long_list)
-            # print(short_list)
+
         # Iterate through all stock
         for _, row in data.iterrows():
             ticker = row["identifier"]
 
             # Get rid of invalid data
-            if ticker not in self.ticker_window.keys() or len(cum_ret) < 20:
+            if ticker not in self.ticker_window.keys() or porportion == 0:
                 continue
 
             if ticker in short_list and (
@@ -195,6 +198,8 @@ class Strategy:
                         "amount": (self.betting / long_position) / price,
                         "position": 1,
                     }
+        else:
+            new_holding = holding
         return new_holding, dicision
 
 
@@ -203,6 +208,7 @@ def sandbox(strategy, data: pd.DataFrame, holding, end):
     # Get the newset holdings and dicisions
     new_holding, dicision = strategy.trade_asset(data, holding)
     short_PnL, long_PnL, transaction_cost = 0, 0, 0
+    short_asset, long_asset = 0, 0
 
     if holding != {}:
 
@@ -241,9 +247,19 @@ def sandbox(strategy, data: pd.DataFrame, holding, end):
                     * TC_RATE
                 )
 
+            # Calculate Asset of previous long position
+            elif holding[ticker]["position"] == -1 and dicision[ticker] == 0:
+                short_asset += holding[ticker]["amount"] * holding[ticker]["price"]
+
+            # Calculate Asset of previous long position
+            elif holding[ticker]["position"] == 1 and dicision[ticker] == 0:
+                long_asset += holding[ticker]["amount"] * holding[ticker]["price"]
+
     return (
         long_PnL - transaction_cost,
         short_PnL - transaction_cost,
+        short_asset,
+        long_asset,
         new_holding,
         transaction_cost,
     )
@@ -256,7 +272,7 @@ def fetch(file_path):
     return data
 
 
-def fetcher(price_vol: dict, date: datetime):
+def fetcher(price_vol: dict, date: dt.datetime):
 
     # return the price information for the given date
     try:
@@ -282,20 +298,21 @@ def plot(assets, years, path, title, ylabel):
     fig.savefig(path + "/" + title.replace(" ", "_"))
 
 
-def engine(price_vol: dict, start: datetime, end: datetime):
+def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
 
     # The main part of the engine component
-    delta = datetime.timedelta(days=1)
+    delta = dt.timedelta(days=1)
 
     data, years, current_holdings = [], [], {}
 
-    assets, long_pnl, short_pnl = [], [], []
+    assets, long_asset, short_asset = [], [], []
+    long_pnl, short_pnl = [], []
 
     transaction_cost = []
 
     ma_cross = Strategy()
 
-    path = "./image/" + start.strftime("%Y-%m-%d") + "~" + end.strftime("%Y-%m-%d")
+    path = "./image/" + dt.datetime.now().strftime("%m-%d-%Y_%H:%M:%S")
     os.mkdir(path)
 
     while start <= end:
@@ -305,13 +322,20 @@ def engine(price_vol: dict, start: datetime, end: datetime):
 
         if current_data is not None:
             years.append(start)
-            long_asset, short_asset, current_holdings, cost = sandbox(
-                ma_cross, current_data, current_holdings, start == end
-            )
-            # print(long_asset, short_asset)
-            assets.append(long_asset + short_asset)
-            long_pnl.append(long_asset)
-            short_pnl.append(short_asset)
+            (
+                current_long_pnl,
+                current_short_pnl,
+                current_long_asset,
+                current_short_asset,
+                current_holdings,
+                cost,
+            ) = sandbox(ma_cross, current_data, current_holdings, start == end)
+
+            assets.append(current_long_pnl + current_short_pnl)
+            long_pnl.append(current_long_pnl)
+            short_pnl.append(current_short_pnl)
+            long_asset.append(current_long_pnl)
+            short_asset.append(current_short_asset)
             transaction_cost.append(cost)
 
         start += delta
@@ -321,13 +345,19 @@ def engine(price_vol: dict, start: datetime, end: datetime):
     plot(long_pnl, years, path, "Long PnL", "PnL")
     plot(short_pnl, years, path, "Short PnL", "PnL")
 
-    # plot PnL curve
+    # plot Assets curve
     plot(np.cumsum(assets), years, path, "Total Assets", "Assets")
-    plot(np.cumsum(long_pnl), years, path, "Long Assets", "Assets")
-    plot(np.cumsum(short_pnl), years, path, "Short Assets", "Assets")
+    plot(long_asset + np.cumsum(long_pnl), years, path, "Long Assets", "Assets")
+    plot(short_asset + np.cumsum(short_pnl), years, path, "Short Assets", "Assets")
 
     # Transaction Cost
-    plot(transaction_cost, years, path, "Accumulate Transaction Cost", "TC")
+    plot(
+        np.cumsum(transaction_cost),
+        years,
+        path,
+        f"Accumulate Transaction Cost",
+        "TC",
+    )
 
 
 def init():
@@ -338,9 +368,9 @@ def init():
     price_vol = {}
 
     # Looping through the date
-    start_date = datetime.date(2016, 1, 1)
-    end_date = datetime.date(2020, 12, 31)
-    delta = datetime.timedelta(days=1)
+    start_date = dt.date(2017, 1, 1)
+    end_date = dt.date(2020, 12, 31)
+    delta = dt.timedelta(days=1)
 
     # Get all the price data
     while start_date <= end_date:
@@ -357,7 +387,7 @@ def init():
     print("--- Start Engine ---")
 
     # Start the engine
-    engine(price_vol, datetime.date(2018, 1, 1), datetime.date(2020, 12, 31))
+    engine(price_vol, dt.date(2017, 1, 1), dt.date(2020, 12, 31))
 
 
 if __name__ == "__main__":

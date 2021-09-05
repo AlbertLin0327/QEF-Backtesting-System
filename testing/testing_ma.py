@@ -1,10 +1,11 @@
 # import necessary libraries
 import pandas as pd
-import datetime
+import datetime as dt
 import pandas as pd
 import numpy as np
 import matplotlib
 import talib
+import os
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -161,7 +162,7 @@ def fetch(file_path):
     return data
 
 
-def fetcher(price_vol: dict, date: datetime):
+def fetcher(price_vol: dict, date: dt.datetime):
 
     # return the price information for the given date
     try:
@@ -171,7 +172,7 @@ def fetcher(price_vol: dict, date: datetime):
 
 
 # Plotting functions
-def plot(assets, years, title, ylabel):
+def plot(assets, years, path, title, ylabel):
 
     fig = plt.figure(figsize=(10, 10))
 
@@ -184,19 +185,22 @@ def plot(assets, years, title, ylabel):
     plt.plot(years, assets)
 
     # plt.show()
-    fig.savefig("image/" + title.replace(" ", "_"))
+    fig.savefig(path + "/" + title.replace(" ", "_"))
 
 
-def engine(price_vol: dict, start: datetime, end: datetime):
+def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
 
     # The main part of the engine component
-    delta = datetime.timedelta(days=1)
+    delta = dt.timedelta(days=1)
 
     data, years, current_holdings = [], [], {}
 
     assets, long_pnl, short_pnl = [], [], []
 
     ma_cross = Strategy()
+
+    path = "./image/" + dt.datetime.now().strftime("%m-%d-%Y,%H:%M:%S")
+    os.mkdir(path)
 
     while start <= end:
 
@@ -215,14 +219,14 @@ def engine(price_vol: dict, start: datetime, end: datetime):
         start += delta
 
     # plot PnL curve
-    plot(assets, years, "Total PnL", "PnL")
-    plot(long_pnl, years, "Long PnL", "PnL")
-    plot(short_pnl, years, "Short PnL", "PnL")
+    plot(assets, years, path, "Total PnL", "PnL")
+    plot(long_pnl, years, path, "Long PnL", "PnL")
+    plot(short_pnl, years, path, "Short PnL", "PnL")
 
     # plot PnL curve
-    plot(np.cumsum(assets), years, "Total Assets", "Assets")
-    plot(np.cumsum(long_pnl), years, "Long Assets", "Assets")
-    plot(np.cumsum(short_pnl), years, "Short Assets", "Assets")
+    plot(np.cumsum(assets), years, path, "Total Assets", "Assets")
+    plot(np.cumsum(long_pnl), years, path, "Long Assets", "Assets")
+    plot(np.cumsum(short_pnl), years, path, "Short Assets", "Assets")
 
 
 def init():
@@ -233,9 +237,9 @@ def init():
     price_vol = {}
 
     # Looping through the date
-    start_date = datetime.date(2016, 1, 1)
-    end_date = datetime.date(2020, 12, 31)
-    delta = datetime.timedelta(days=1)
+    start_date = dt.date(2016, 1, 1)
+    end_date = dt.date(2020, 12, 31)
+    delta = dt.timedelta(days=1)
 
     # Get all the price data
     while start_date <= end_date:
@@ -251,7 +255,7 @@ def init():
     print("--- Start Engine ---")
 
     # Start the engine
-    engine(price_vol, datetime.date(2016, 1, 1), datetime.date(2020, 12, 31))
+    engine(price_vol, dt.date(2016, 1, 1), dt.date(2020, 12, 31))
 
 
 if __name__ == "__main__":
