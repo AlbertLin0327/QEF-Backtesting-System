@@ -3,7 +3,6 @@ import pandas as pd
 import datetime as dt
 import pandas as pd
 import numpy as np
-import math
 import matplotlib
 import sys
 sys.path.append('../')
@@ -155,13 +154,13 @@ class Strategy:
                 ticker not in holding or holding[ticker]["position"] > 0
             ):
                 dicision[ticker] = -1
-                short_position += math.exp(short_list[ticker])
+                short_position += np.exp(short_list[ticker])
 
             elif ticker in long_list and (
                 ticker not in holding or holding[ticker]["position"] < 0
             ):
                 dicision[ticker] = 1
-                long_position += math.exp(long_list[ticker])
+                long_position += np.exp(long_list[ticker])
 
             else:
                 dicision[ticker] = 0
@@ -190,7 +189,7 @@ class Strategy:
 
                     new_holding[ticker] = {
                         "price": price,
-                        "amount": -(self.betting / short_position * math.exp(short_list[ticker])
+                        "amount": -(self.betting / short_position * np.exp(short_list[ticker])
 ) / price,
                         "position": -1,
                     }
@@ -200,7 +199,7 @@ class Strategy:
 
                     new_holding[ticker] = {
                         "price": price,
-                        "amount": (self.betting / long_position * math.exp(long_list[ticker])
+                        "amount": (self.betting / long_position * np.exp(long_list[ticker])
 ) / price,
                         "position": 1,
                     }
@@ -303,6 +302,16 @@ def plot(assets, years, path, title, ylabel):
     # plt.show()
     fig.savefig(path + "/" + title.replace(" ", "_"))
 
+def cal_annual_return(daily_return: list):
+    annual = len(daily_return) // 252
+    # print(daily_return)
+    for i in range(annual + 1):
+        annual_return = 0
+        j = 0
+        while j < 252 and i * 252 + j < len(daily_return):
+            annual_return += daily_return[i * 252 + j]
+            j += 1
+        print(f'annual_return(year {i + 1}): {annual_return}')
 
 def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
 
@@ -345,10 +354,12 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
             short_asset.append(current_short_asset)
             transaction_cost.append(cost)
             if len(assets) > 1 and total != 0:
-                daily_return.append(assets[-1] / total - 1)
-            total += assets[-1]
+                daily_return.append((assets[-1] + long_asset[-1] + short_asset[-1]) / total - 1)
+            total += assets[-1] + long_asset[-1] + short_asset[-1]
 
         start += delta
+    print(long_asset)
+    print(short_asset)
     # plot PnL curve
     plot(assets, years, path, "Total PnL", "PnL")
     plot(long_pnl, years, path, "Long PnL", "PnL")
@@ -369,8 +380,10 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
         "TC",
     )
     sharpe_ratio = mean(daily_return) / stddev(daily_return) * (len(years) ** 0.5)
-    print(f'mean: {mean(daily_return)}')
-    print(f'stddev: {stddev(daily_return)}')
+    # print(f'mean: {mean(daily_return)}')
+    # print(f'stddev: {stddev(daily_return)}')
+    cal_annual_return(daily_return)
+    print(f'total return: {sum(daily_return)}')
     print(f'Sharp ratio: {sharpe_ratio}')
 
 
@@ -382,7 +395,7 @@ def init():
     price_vol = {}
 
     # Looping through the date
-    start_date = dt.date(2019, 1, 1)
+    start_date = dt.date(2020, 1, 1)
     end_date = dt.date(2020, 12, 31)
     delta = dt.timedelta(days=1)
 
@@ -401,7 +414,7 @@ def init():
     print("--- Start Engine ---")
 
     # Start the engine
-    engine(price_vol, dt.date(2019, 1, 1), dt.date(2020, 12, 31))
+    engine(price_vol, dt.date(2020, 1, 1), dt.date(2020, 12, 31))
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ def stddev(data: list, ddof=0):
     # ddof = 1 to compute the sample standard deviation
     n = len(data)
     if n < 2:
-        raise TypeError("less than two element")
+        raise TypeError("less than two")
     ss = square_deviation(data)
     pvar = ss / (n - ddof)
     return pvar ** 0.5
