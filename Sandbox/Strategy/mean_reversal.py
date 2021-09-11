@@ -71,12 +71,13 @@ class Strategy:
         short_list = {}
         long_list = {}
 
-        porportion = len(cum_ret) // 5
+        porportion = len(cum_ret) // 10
 
         if porportion > 0:
+            # given ranking as weighted
             for i in range(porportion):
-                short_list[cum_ret[-(i + 1)][1]] = -(i + 1)
-                long_list[cum_ret[i][1]] = i
+                short_list[cum_ret[-(i + 1)][1]] = porportion - i
+                long_list[cum_ret[i][1]] = porportion - i
 
         # Iterate through all stock
         for _, row in data.iterrows():
@@ -90,13 +91,14 @@ class Strategy:
                 ticker not in holding or holding[ticker]["position"] > 0
             ):
                 dicision[ticker] = -1
-                short_position += 1
+                
+                short_position += np.exp(short_list[ticker])
 
             elif ticker in long_list and (
                 ticker not in holding or holding[ticker]["position"] < 0
             ):
                 dicision[ticker] = 1
-                long_position += 1
+                long_position += np.exp(long_list[ticker])
 
             else:
                 dicision[ticker] = 0
@@ -120,12 +122,12 @@ class Strategy:
                             "position": 0,
                         }
 
-                # Short sell and make the amout negative
+                # Short sell and make the amout negative with non-equal-weighted (softmax)
                 elif dicision[ticker] == -1:
 
                     new_holding[ticker] = {
                         "price": price,
-                        "amount": -(self.betting / short_position) / price,
+                        "amount": -(self.betting * np.exp(short_list[ticker]) / short_position) / price,
                         "position": -1,
                     }
 
@@ -134,7 +136,7 @@ class Strategy:
 
                     new_holding[ticker] = {
                         "price": price,
-                        "amount": (self.betting / long_position) / price,
+                        "amount": (self.betting * np.exp(long_list[ticker]) / long_position ) / price,
                         "position": 1,
                     }
         else:

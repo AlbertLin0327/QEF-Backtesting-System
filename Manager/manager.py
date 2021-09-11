@@ -1,10 +1,10 @@
+import matplotlib
 import sys
 sys.path.append('../')
-import matplotlib
 # from Engine.engine import Engine
 from Lib.lib import mean, square_deviation, stddev
-# from Sandbox.order import Order, OrderBook 
-# from Sandbox.holding import Holding
+from Sandbox.order import Order, OrderBook 
+from Sandbox.holding import Holding
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -30,7 +30,7 @@ class Manager:
     def setYear(self, date):
         self.years.append(date)
 
-    def run(self, OrderBook, current_holdings):
+    def run(self, long_asset, short_asset, long_pnL, short_pnl):
 
         # Get the return value from sandbox and maintain it   
         prev_holding = self.current_holdings 
@@ -49,7 +49,6 @@ class Manager:
         sharpe_ratio = r_p / theta_p
 
         # Since it is daily value, annualize it by multiply by the square of trading days
-     
         return (len(self.years) ** 0.5) * sharpe_ratio  
 
     def annual_sharpe_ratio(self):

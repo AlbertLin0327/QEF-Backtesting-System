@@ -3,5 +3,6 @@
 # Sensetive Data
 /raw_data
 /Dataset
+/testing/image
 .vscode
 

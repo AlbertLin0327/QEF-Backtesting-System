@@ -3,7 +3,11 @@ import pandas as pd
 import datetime as dt
 import pandas as pd
 import numpy as np
+import math
 import matplotlib
+import sys
+sys.path.append('../')
+from Lib.lib import mean, square_deviation, stddev
 
 # import talib
 import os
@@ -136,8 +140,8 @@ class Strategy:
 
         if porportion > 0:
             for i in range(porportion):
-                short_list[cum_ret[-(i + 1)][1]] = -(i + 1)
-                long_list[cum_ret[i][1]] = i
+                short_list[cum_ret[-(i + 1)][1]] = porportion - i
+                long_list[cum_ret[i][1]] = porportion - i
 
         # Iterate through all stock
         for _, row in data.iterrows():
@@ -151,13 +155,13 @@ class Strategy:
                 ticker not in holding or holding[ticker]["position"] > 0
             ):
                 dicision[ticker] = -1
-                short_position += 1
+                short_position += math.exp(short_list[ticker])
 
             elif ticker in long_list and (
                 ticker not in holding or holding[ticker]["position"] < 0
             ):
                 dicision[ticker] = 1
-                long_position += 1
+                long_position += math.exp(long_list[ticker])
 
             else:
                 dicision[ticker] = 0
@@ -186,7 +190,8 @@ class Strategy:
 
                     new_holding[ticker] = {
                         "price": price,
-                        "amount": -(self.betting / short_position) / price,
+                        "amount": -(self.betting / short_position * math.exp(short_list[ticker])
+) / price,
                         "position": -1,
                     }
 
@@ -195,7 +200,8 @@ class Strategy:
 
                     new_holding[ticker] = {
                         "price": price,
-                        "amount": (self.betting / long_position) / price,
+                        "amount": (self.betting / long_position * math.exp(long_list[ticker])
+) / price,
                         "position": 1,
                     }
         else:
@@ -307,6 +313,7 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
 
     assets, long_asset, short_asset = [], [], []
     long_pnl, short_pnl = [], []
+    daily_return = []
 
     transaction_cost = []
 
@@ -314,7 +321,7 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
 
     path = "./image/" + dt.datetime.now().strftime("%m-%d-%Y_%H:%M:%S")
     os.mkdir(path)
-
+    total = 0
     while start <= end:
 
         # Fetch the date
@@ -334,12 +341,14 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
             assets.append(current_long_pnl + current_short_pnl)
             long_pnl.append(current_long_pnl)
             short_pnl.append(current_short_pnl)
-            long_asset.append(current_long_pnl)
+            long_asset.append(current_long_asset)
             short_asset.append(current_short_asset)
             transaction_cost.append(cost)
+            if len(assets) > 1 and total != 0:
+                daily_return.append(assets[-1] / total - 1)
+            total += assets[-1]
 
         start += delta
-
     # plot PnL curve
     plot(assets, years, path, "Total PnL", "PnL")
     plot(long_pnl, years, path, "Long PnL", "PnL")
@@ -350,6 +359,7 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
     plot(long_asset + np.cumsum(long_pnl), years, path, "Long Assets", "Assets")
     plot(short_asset + np.cumsum(short_pnl), years, path, "Short Assets", "Assets")
 
+    plot(daily_return, years[-len(daily_return):], path, "Daily Return", "Return")
     # Transaction Cost
     plot(
         np.cumsum(transaction_cost),
@@ -358,6 +368,10 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
         f"Accumulate Transaction Cost",
         "TC",
     )
+    sharpe_ratio = mean(daily_return) / stddev(daily_return) * (len(years) ** 0.5)
+    print(f'mean: {mean(daily_return)}')
+    print(f'stddev: {stddev(daily_return)}')
+    print(f'Sharp ratio: {sharpe_ratio}')
 
 
 def init():
@@ -368,7 +382,7 @@ def init():
     price_vol = {}
 
     # Looping through the date
-    start_date = dt.date(2017, 1, 1)
+    start_date = dt.date(2019, 1, 1)
     end_date = dt.date(2020, 12, 31)
     delta = dt.timedelta(days=1)
 
@@ -387,7 +401,7 @@ def init():
     print("--- Start Engine ---")
 
     # Start the engine
-    engine(price_vol, dt.date(2017, 1, 1), dt.date(2020, 12, 31))
+    engine(price_vol, dt.date(2019, 1, 1), dt.date(2020, 12, 31))
 
 
 if __name__ == "__main__":

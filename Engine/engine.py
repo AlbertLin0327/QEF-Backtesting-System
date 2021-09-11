@@ -2,12 +2,11 @@ import datetime as dt
 import sys
 sys.path.append('../')
 from Manager.manager import Manager
-from Sandbox.sandbox import Sandbox
 
 class Engine:
 
     # Parameter setting
-    def __init__(self, price_vol: dict, start: dt.datetime, end: dt.datetime, sandbox: Sandbox, manager: Manager):
+    def __init__(self, price_vol: dict, start: dt.datetime, end: dt.datetime, sandbox, manager: Manager):
         self.delta = dt.timedelta(days=1)
         self.price_vol = price_vol
         self.start_date = start

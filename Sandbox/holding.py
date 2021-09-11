@@ -1,4 +1,4 @@
-from order import Order, OrderBook
+from .order import Order, OrderBook
 import pandas as pd
 import datetime as dt
 
