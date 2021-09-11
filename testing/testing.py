@@ -5,7 +5,8 @@ import pandas as pd
 import numpy as np
 import matplotlib
 import sys
-sys.path.append('../')
+
+sys.path.append("../")
 from Lib.lib import mean, square_deviation, stddev
 
 # import talib
@@ -189,8 +190,10 @@ class Strategy:
 
                     new_holding[ticker] = {
                         "price": price,
-                        "amount": -(self.betting / short_position * np.exp(short_list[ticker])
-) / price,
+                        "amount": -(
+                            self.betting / short_position * np.exp(short_list[ticker])
+                        )
+                        / price,
                         "position": -1,
                     }
 
@@ -199,8 +202,10 @@ class Strategy:
 
                     new_holding[ticker] = {
                         "price": price,
-                        "amount": (self.betting / long_position * np.exp(long_list[ticker])
-) / price,
+                        "amount": (
+                            self.betting / long_position * np.exp(long_list[ticker])
+                        )
+                        / price,
                         "position": 1,
                     }
         else:
@@ -222,12 +227,12 @@ def sandbox(strategy, data: pd.DataFrame, holding, end):
         # Find all tickers and Calculate PnL
         for ticker in holding:
 
-            # Do nothing if hold
-            if ticker not in dicision or dicision[ticker] == 0:
-                continue
-
             # Calculate PnL of previous short position
-            elif holding[ticker]["position"] == -1 and dicision[ticker] == 1:
+            if (
+                holding[ticker]["position"] == -1
+                and ticker in dicision
+                and dicision[ticker] == 1
+            ):
 
                 short_PnL += holding[ticker]["amount"] * (
                     new_holding[ticker]["price"] - holding[ticker]["price"]
@@ -240,7 +245,11 @@ def sandbox(strategy, data: pd.DataFrame, holding, end):
                 )
 
             # Calculate PnL of previous long position
-            elif holding[ticker]["position"] == 1 and dicision[ticker] == -1:
+            elif (
+                holding[ticker]["position"] == 1
+                and ticker in dicision
+                and dicision[ticker] == -1
+            ):
 
                 long_PnL += holding[ticker]["amount"] * (
                     new_holding[ticker]["price"] - holding[ticker]["price"]
@@ -253,11 +262,15 @@ def sandbox(strategy, data: pd.DataFrame, holding, end):
                 )
 
             # Calculate Asset of previous long position
-            elif holding[ticker]["position"] == -1 and dicision[ticker] == 0:
+            elif holding[ticker]["amount"] < 0 and (
+                ticker not in dicision or dicision[ticker] == 0
+            ):
                 short_asset += holding[ticker]["amount"] * holding[ticker]["price"]
 
             # Calculate Asset of previous long position
-            elif holding[ticker]["position"] == 1 and dicision[ticker] == 0:
+            elif holding[ticker]["amount"] > 0 and (
+                ticker not in dicision or dicision[ticker] == 0
+            ):
                 long_asset += holding[ticker]["amount"] * holding[ticker]["price"]
 
     return (
@@ -302,6 +315,7 @@ def plot(assets, years, path, title, ylabel):
     # plt.show()
     fig.savefig(path + "/" + title.replace(" ", "_"))
 
+
 def cal_annual_return(daily_return: list):
     annual = len(daily_return) // 252
     # print(daily_return)
@@ -311,7 +325,8 @@ def cal_annual_return(daily_return: list):
         while j < 252 and i * 252 + j < len(daily_return):
             annual_return += daily_return[i * 252 + j]
             j += 1
-        print(f'annual_return(year {i + 1}): {annual_return}')
+        print(f"annual_return(year {i + 1}): {annual_return}")
+
 
 def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
 
@@ -341,8 +356,8 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
             (
                 current_long_pnl,
                 current_short_pnl,
-                current_long_asset,
                 current_short_asset,
+                current_long_asset,
                 current_holdings,
                 cost,
             ) = sandbox(ma_cross, current_data, current_holdings, start == end)
@@ -353,24 +368,33 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
             long_asset.append(current_long_asset)
             short_asset.append(current_short_asset)
             transaction_cost.append(cost)
-            if len(assets) > 1 and total != 0:
-                daily_return.append((assets[-1] + long_asset[-1] + short_asset[-1]) / total - 1)
-            total += assets[-1] + long_asset[-1] + short_asset[-1]
+            if len(assets) > 2 and total != 0:
+                daily_return.append(
+                    (assets[-1] + long_asset[-1] + short_asset[-1] + total)
+                    / (total + long_asset[-2] + short_asset[-2])
+                    - 1
+                )
+            total += assets[-1]
 
         start += delta
-    print(long_asset)
-    print(short_asset)
+    print(daily_return)
     # plot PnL curve
     plot(assets, years, path, "Total PnL", "PnL")
     plot(long_pnl, years, path, "Long PnL", "PnL")
     plot(short_pnl, years, path, "Short PnL", "PnL")
 
     # plot Assets curve
-    plot(np.cumsum(assets), years, path, "Total Assets", "Assets")
+    plot(
+        np.array(long_asset) + np.array(short_asset) + np.cumsum(assets),
+        years,
+        path,
+        "Total Assets",
+        "Assets",
+    )
     plot(long_asset + np.cumsum(long_pnl), years, path, "Long Assets", "Assets")
     plot(short_asset + np.cumsum(short_pnl), years, path, "Short Assets", "Assets")
 
-    plot(daily_return, years[-len(daily_return):], path, "Daily Return", "Return")
+    plot(daily_return, years[-len(daily_return) :], path, "Daily Return", "Return")
     # Transaction Cost
     plot(
         np.cumsum(transaction_cost),
@@ -379,12 +403,12 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
         f"Accumulate Transaction Cost",
         "TC",
     )
-    sharpe_ratio = mean(daily_return) / stddev(daily_return) * (len(years) ** 0.5)
-    # print(f'mean: {mean(daily_return)}')
-    # print(f'stddev: {stddev(daily_return)}')
+    sharpe_ratio = np.mean(daily_return) / np.std(daily_return) * (len(years) ** 0.5)
+    print(f"mean: {np.mean(daily_return)}")
+    print(f"stddev: {np.std(daily_return)}")
     cal_annual_return(daily_return)
-    print(f'total return: {sum(daily_return)}')
-    print(f'Sharp ratio: {sharpe_ratio}')
+    print(f"total return: {sum(daily_return)}")
+    print(f"Sharp ratio: {sharpe_ratio}")
 
 
 def init():
