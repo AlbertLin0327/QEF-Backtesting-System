@@ -1,14 +1,15 @@
-# import necessary libraries
 import pandas as pd
 import datetime as dt
 import numpy as np
-import importlib
 
-from order import Order, OrderBook
+from Sandbox import Order, OrderBook
 
 
 class Container:
     def __init__(self, strategy_filename: str):
+
+        # import necessary libraries
+        import importlib
 
         # Import Strategy file
         self.strategy_path = "Stratetgy." + strategy_filename

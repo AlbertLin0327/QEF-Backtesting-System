@@ -1,21 +1,20 @@
 import matplotlib
 import sys
-sys.path.append('../')
-# from Engine.engine import Engine
-from Lib.lib import mean, square_deviation, stddev
-from Sandbox.order import Order, OrderBook 
-from Sandbox.holding import Holding
+
+from Lib import mean, square_deviation, stddev
+from Sandbox import Order, OrderBook, Holding
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-class Manager:
+
+class Broker:
 
     # Parameters setting
     def __init__(self):
         self.years = []
         self.current_holdings = []
-        self.assets = [] 
+        self.assets = []
         self.total_assets = 0
         self.long_pnl = []
         self.short_pnl = []
@@ -32,8 +31,8 @@ class Manager:
 
     def run(self, long_asset, short_asset, long_pnL, short_pnl):
 
-        # Get the return value from sandbox and maintain it   
-        prev_holding = self.current_holdings 
+        # Get the return value from sandbox and maintain it
+        prev_holding = self.current_holdings
         self.current_holdings = current_holdings
         self.current_holdings.calculate_asset()
         # self.cal_PnL(prev_holding)
@@ -49,7 +48,7 @@ class Manager:
         sharpe_ratio = r_p / theta_p
 
         # Since it is daily value, annualize it by multiply by the square of trading days
-        return (len(self.years) ** 0.5) * sharpe_ratio  
+        return (len(self.years) ** 0.5) * sharpe_ratio
 
     def annual_sharpe_ratio(self):
         r_p = mean(self.tmp)
@@ -57,10 +56,10 @@ class Manager:
         return (252 ** 0.5) * r_p / theta_p
 
     def cal_annual_return(self):
-        return sum(self.tmp)  
-    
+        return sum(self.tmp)
+
     def cal_PnL(self, prev_holdings):
-        
+
         long_PnL, short_PnL, long_asset, short_asset = 0, 0, 0, 0
 
         if prev_holdings != {}:
@@ -75,10 +74,18 @@ class Manager:
                     continue
 
                 # Calculate PnL of previous short position
-                elif prev_holdings[ticker].position == -1 and self.OrderBook[ticker].position == 1:
+                elif (
+                    prev_holdings[ticker].position == -1
+                    and self.OrderBook[ticker].position == 1
+                ):
 
-                    short_PnL += prev_holdings[ticker].size * prev_holdings[ticker].position * (
-                        self.current_holding[ticker].price - prev_holdings[ticker].price
+                    short_PnL += (
+                        prev_holdings[ticker].size
+                        * prev_holdings[ticker].position
+                        * (
+                            self.current_holding[ticker].price
+                            - prev_holdings[ticker].price
+                        )
                     )
 
                     # transaction_cost += abs(
@@ -88,10 +95,18 @@ class Manager:
                     # )
 
                 # Calculate PnL of previous long position
-                elif prev_holdings[ticker].position == 1 and self.OrderBook[ticker].position == -1:
+                elif (
+                    prev_holdings[ticker].position == 1
+                    and self.OrderBook[ticker].position == -1
+                ):
 
-                    long_PnL += prev_holdings[ticker].size * prev_holdings[ticker].position * (
-                        self.current_holding[ticker].price - prev_holdings[ticker].price
+                    long_PnL += (
+                        prev_holdings[ticker].size
+                        * prev_holdings[ticker].position
+                        * (
+                            self.current_holding[ticker].price
+                            - prev_holdings[ticker].price
+                        )
                     )
 
                     # transaction_cost += abs(
@@ -101,11 +116,17 @@ class Manager:
                     # )
 
                 # Calculate Asset of previous long position
-                elif prev_holdings[ticker].position == -1 and self.OrderBook[ticker].position == 0:
+                elif (
+                    prev_holdings[ticker].position == -1
+                    and self.OrderBook[ticker].position == 0
+                ):
                     short_asset += prev_holdings[ticker].amount
 
                 # Calculate Asset of previous long position
-                elif prev_holdings[ticker].position == 1 and self.OrderBook[ticker].position == 0:
+                elif (
+                    prev_holdings[ticker].position == 1
+                    and self.OrderBook[ticker].position == 0
+                ):
                     long_asset += prev_holdings[ticker].amount
 
             self.assets.append(long_PnL + short_PnL + long_asset + short_asset)

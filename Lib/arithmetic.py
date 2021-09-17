@@ -5,11 +5,13 @@ def mean(data: list):
         raise TypeError("divide by zero")
     return sum(data) / n
 
+
 def square_deviation(data: list):
     # Return sum of square deviations of sequence data
     c = mean(data)
     ss = sum((x - c) ** 2 for x in data)
     return ss
+
 
 def stddev(data: list, ddof=0):
     # Calculate the population standard deviation by default

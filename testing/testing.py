@@ -81,7 +81,7 @@ class Strategy:
     def __init__(self):
         self.ticker_window = {}
         self.period = 5
-        self.betting = 1
+        self.betting = 100000
 
     # Find the price window
     def window(self, data):
@@ -136,7 +136,7 @@ class Strategy:
         short_list = {}
         long_list = {}
 
-        porportion = len(cum_ret) // 5
+        porportion = len(cum_ret) // 2
 
         if porportion > 0:
             for i in range(porportion):
@@ -434,7 +434,9 @@ def engine(price_vol: dict, start: dt.datetime, end: dt.datetime):
         f"Accumulate Transaction Cost",
         "TC",
     )
-    sharpe_ratio = np.mean(daily_return) / np.std(daily_return) * (len(years) ** 0.5)
+    sharpe_ratio = (
+        np.mean(daily_return) / np.std(daily_return) * (len(daily_return) ** 0.5)
+    )
     print(f"mean: {np.mean(daily_return)}")
     print(f"stddev: {np.std(daily_return)}")
     cal_annual_return(daily_return)
