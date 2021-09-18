@@ -5,4 +5,4 @@
 /Dataset
 /testing/image
 .vscode
-
+*/__pycache__
