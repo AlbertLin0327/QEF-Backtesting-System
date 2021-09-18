@@ -2,7 +2,12 @@ import datetime as dt
 
 from Manager import Broker
 from Engine import Data
+import os
+import numpy as np
+import matplotlib
 
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 class Engine:
 
@@ -46,6 +51,7 @@ class Engine:
                 )
 
             current_date += self.delta
-
-        # Plot the needed curve
-        # self.manager.plot("../testing", "test", "none")
+        # path = "./image/" + dt.datetime.now().strftime("%m-%d-%Y_%H:%M:%S")
+        # os.mkdir(path)
+        self.manager.plot_all("./image")
+        print(f'sharpe ratio={self.manager.cal_sharpe_ratio()}')

@@ -13,31 +13,25 @@ class Broker:
     # Parameters setting
     def __init__(self):
         self.years = []
-        self.current_holdings = []
         self.assets = []
-        self.total_assets = 0
-        self.long_pnl = []
-        self.short_pnl = []
         self.long_asset = []
         self.short_asset = []
-        self.transaction_cost = []
+        self.long_pnl = []
+        self.short_pnl = []
         self.daily_return = []
-        self.tmp = []
-        self.OrderBook = {}
 
     # Appending valid trading date
     def setYear(self, date):
         self.years.append(date)
 
-    def run(self, long_asset, short_asset, total_fiat, long_pnL, short_pnl):
-
-        # Get the return value from sandbox and maintain it
-        prev_holding = self.current_holdings
-
-        # print(long_asset, short_asset, long_pnL, short_pnl)
-        print(long_asset + short_asset + total_fiat)
-
-        # self.cal_daily_return()
+    def run(self, long_asset, short_asset, total_fiat, long_pnl, short_pnl):
+        # print(long_asset + short_asset + total_fiat)
+        self.assets.append(total_fiat + long_asset + short_asset)
+        self.long_pnl.append(long_pnl)
+        self.short_pnl.append(short_pnl)
+        self.long_asset.append(long_asset)
+        self.short_asset.append(short_asset)
+        self.cal_daily_return()
 
     def cal_sharpe_ratio(self):
 
@@ -51,22 +45,12 @@ class Broker:
         # Since it is daily value, annualize it by multiply by the square of trading days
         return (len(self.years) ** 0.5) * sharpe_ratio
 
-    def annual_sharpe_ratio(self):
-        r_p = mean(self.tmp)
-        theta_p = stddev(self.tmp)
-        return (252 ** 0.5) * r_p / theta_p
-
-    def cal_annual_return(self):
-        return sum(self.tmp)
-
     def cal_daily_return(self):
-        if len(self.assets) > 1 and self.total_assets != 0:
-            daily_return = self.assets[-1] / self.total_assets - 1
+        if len(self.assets) > 2:
+            daily_return = self.assets[-1] / self.assets[-2] - 1
             self.daily_return.append(daily_return)
-            self.tmp.append(daily_return)
-        self.total_assets += self.assets[-1]
 
-    def plot(self, path, title, ylabel):
+    def plot(self, data, path, title, ylabel):
 
         fig = plt.figure(figsize=(10, 10))
 
@@ -74,9 +58,32 @@ class Broker:
         plt.title(title)
         plt.xlabel("Time")
         plt.ylabel(ylabel)
-
+        years = self.years[-len(data):]
         # draw the fitting curve
-        plt.plot(self.years, self.assets)
+        plt.plot(years, data)
 
         # plt.show()
         fig.savefig(path + "/" + title.replace(" ", "_"))
+    
+    def plot_all(self, path):
+        self.plot(self.long_pnl, path, "Long PnL", "PnL")
+        self.plot(self.short_pnl, path, "Short PnL", "PnL")
+        self.plot(self.assets,path, "Total Assets", "Assets")
+        self.plot(
+            (self.long_asset + np.cumsum(self.long_pnl)),
+            path,
+            "Long Assets",
+            "Assets",
+        )
+        self.plot(
+            (self.short_asset + np.cumsum(self.short_pnl)),
+            path,
+            "Short Assets",
+            "Assets",
+        )
+        self.plot(
+            self.daily_return,
+            path,
+            "Daily Return",
+            "Return",
+        )

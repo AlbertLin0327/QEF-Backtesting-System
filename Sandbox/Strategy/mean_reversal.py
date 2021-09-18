@@ -112,8 +112,7 @@ class Strategy:
                         Order(
                             ticker=ticker,
                             size=(
-                                (betting / price)
-                                * (short_list[ticker] / short_position)
+                                (betting / price) * (short_list[ticker] / short_position)
                             ),
                             price=price,
                             position=Order.SHORT,
