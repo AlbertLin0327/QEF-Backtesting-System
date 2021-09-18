@@ -29,7 +29,6 @@ class PortfolioManager(object):
         self.years.append(date)
 
     def run(self, long_asset, short_asset, total_fiat, long_pnl, short_pnl, turnover):
-        # print(long_asset + short_asset + total_fiat)
         self.assets.append(total_fiat + long_asset + short_asset)
         self.long_pnl.append(long_pnl)
         self.short_pnl.append(short_pnl)
@@ -37,9 +36,6 @@ class PortfolioManager(object):
         self.short_asset.append(short_asset)
         self.turnover.append(turnover)
         self.cal_daily_return()
-        if (len(self.daily_return) % 252 == 0 and len(self.daily_return) != 0):
-            self.cal_annual_return()
-            self.cal_annual_sharpe_ratio()
 
     def cal_sharpe_ratio(self):
 
@@ -60,27 +56,35 @@ class PortfolioManager(object):
 
     def cal_total_return(self):
         total_return = 1.0
+
         for d in self.daily_return:
-            total_return *= d
+            total_return *= d + 1
+
         return total_return - 1.0
 
     def cal_annual_return(self):
-        annual_return = 1.0
-        l = len(self.annual_return) * 252
-        for i in range(l, l + 252):
-            annual_return *= self.daily_return[i]
-        self.annual_return.append(annual_return)
-    
-    def cal_annual_sharpe_ratio(self):
-        l = len(self.annual_sharpe_ratio) * 252
-        new_list = []
-        for i in range(l, l + 252):
-            new_list.append(self.daily_return[i])
-        r_p = mean(new_list)
-        theta_p = stddev(new_list)
-        sharpe_ratio = r_p / theta_p
-        self.annual_sharpe_ratio.append((252 ** 0.5) * sharpe_ratio)
 
+        for i in range(len(self.years) - 1, 253, -252):
+            annual_return, new_list = 1.0, self.daily_return[i - 253 : i]
+
+            for j in range(252):
+                annual_return *= new_list[j] + 1
+
+            self.annual_return.append(annual_return)
+
+        return self.annual_return
+
+    def cal_annual_sharpe_ratio(self):
+
+        for i in range(len(self.years) - 1, 253, -252):
+            new_list = self.daily_return[i - 253 : i]
+
+            r_p = mean(new_list)
+            theta_p = stddev(new_list)
+
+            self.annual_sharpe_ratio.append((252 ** 0.5) * r_p / theta_p)
+
+        return self.annual_sharpe_ratio
 
     def plot(self, data, path, title, ylabel):
 
@@ -91,6 +95,7 @@ class PortfolioManager(object):
         plt.xlabel("Time")
         plt.ylabel(ylabel)
         years = self.years[-len(data) :]
+
         # draw the fitting curve
         plt.plot(years, data)
 

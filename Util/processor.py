@@ -48,10 +48,16 @@ def save_result(manager: object, path: str, args: argparse.Namespace) -> None:
     )
 
     # Print necessay ratio and save to csv
+    print(
+        f"--- Result of Strategy {args.strategy_file} on Universe {args.universe_file} ---"
+    )
     print(f"sharpe ratio = {manager.cal_sharpe_ratio()}")
     print(f"total return ratio = {manager.cal_total_return()}")
     print(f"annual sharpe ratio = {manager.cal_annual_sharpe_ratio()}")
     print(f"annual return ratio = {manager.cal_annual_return()}")
+    print(
+        f"--- End Backtesting and result store to history_strategy {args.save_file} ---"
+    )
 
     ratio_path = path + "/ratio.csv"
 
@@ -73,7 +79,7 @@ def save_result(manager: object, path: str, args: argparse.Namespace) -> None:
             [
                 manager.cal_sharpe_ratio(),
                 manager.cal_total_return(),
-                manager.cal_annual_sharpe_ratio(),
-                manager.cal_annual_return(),
+                manager.annual_sharpe_ratio,
+                manager.annual_return,
             ]
         )

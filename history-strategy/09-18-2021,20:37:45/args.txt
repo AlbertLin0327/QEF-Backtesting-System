@@ -1,7 +1,0 @@
-{
-  "start_date": "2019-01-01",
-  "end_date": "2020-12-31",
-  "strategy_file": "mean_reversal",
-  "universe_file": "Taiwan_50",
-  "save_file": "09-18-2021,20:37:45"
-}
