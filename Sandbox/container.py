@@ -2,7 +2,7 @@ import pandas as pd
 import datetime as dt
 import numpy as np
 
-from Sandbox import Holding, Order, OrderBook
+from Sandbox import Holding, Order, OrderBook, Broker
 
 
 class Container:
@@ -23,177 +23,13 @@ class Container:
 
         self.Universe = pd.read_parquet(self.universe_path)
 
+        # Broker
+        self.broker = Broker()
+
         # Instance Variable
         self.holdings = Holding([], self.Universe, dt.datetime.now().date)
 
         self.fiat = 100
-
-    def broker(self, executions: OrderBook):
-
-        long_pnl, short_pnl, fiat_pnl = 0.0, 0.0, 0.0
-
-        for ticker in executions.transaction:
-
-            if (
-                self.holdings.transaction[ticker].position == Order.LONG
-                and executions.transaction[ticker].position == Order.SHORT
-            ):
-
-                if (
-                    executions.transaction[ticker].size
-                    <= self.holdings.transaction[ticker].size
-                ):
-                    pnl = (
-                        executions.transaction[ticker].price
-                        - self.holdings.transaction[ticker].price
-                    ) * executions.transaction[ticker].size
-
-                    fiat_pnl += (
-                        executions.transaction[ticker].price
-                        * executions.transaction[ticker].size
-                    )
-
-                    self.holdings.transaction[ticker].price = (
-                        self.holdings.transaction[ticker].get_amount()
-                        - executions.transaction[ticker].price
-                        * executions.transaction[ticker].size
-                    ) / (
-                        self.holdings.transaction[ticker].size
-                        - executions.transaction[ticker].size
-                    )
-                    self.holdings.transaction[ticker].size -= executions.transaction[
-                        ticker
-                    ].size
-
-                else:
-                    pnl = (
-                        executions.transaction[ticker].price
-                        - self.holdings.transaction[ticker].price
-                    ) * self.holdings.transaction[ticker].size
-
-                    fiat_pnl += (
-                        executions.transaction[ticker].price
-                        * self.holdings.transaction[ticker].size
-                    )
-
-                    self.holdings.transaction[ticker].price = executions.transaction[
-                        ticker
-                    ].price
-                    self.holdings.transaction[ticker].size = (
-                        executions.transaction[ticker].size
-                        - self.holdings.transaction[ticker].size
-                    )
-                    self.holdings.transaction[ticker].position = Order.SHORT
-
-                long_pnl += pnl
-
-            elif (
-                self.holdings.transaction[ticker].position == Order.SHORT
-                and executions.transaction[ticker].position == Order.LONG
-            ):
-
-                if (
-                    executions.transaction[ticker].size
-                    <= self.holdings.transaction[ticker].size
-                ):
-                    pnl = (
-                        self.holdings.transaction[ticker].price
-                        - executions.transaction[ticker].price
-                    ) * executions.transaction[ticker].size
-
-                    fiat_pnl += pnl
-
-                    self.holdings.transaction[ticker].price = (
-                        self.holdings.transaction[ticker].get_amount()
-                        - executions.transaction[ticker].price
-                        * executions.transaction[ticker].size
-                    ) / (
-                        self.holdings.transaction[ticker].size
-                        - executions.transaction[ticker].size
-                    )
-                    self.holdings.transaction[ticker].size -= executions.transaction[
-                        ticker
-                    ].size
-
-                else:
-                    pnl = (
-                        self.holdings.transaction[ticker].price
-                        - executions.transaction[ticker].price
-                    ) * self.holdings.transaction[ticker].size
-
-                    fiat_pnl += (
-                        self.holdings.transaction[ticker].price
-                        * self.holdings.transaction[ticker].size
-                        - executions.transaction[ticker].price
-                        * executions.transaction[ticker].size
-                    )
-
-                    self.holdings.transaction[ticker].price = executions.transaction[
-                        ticker
-                    ].price
-                    self.holdings.transaction[ticker].size = (
-                        executions.transaction[ticker].size
-                        - self.holdings.transaction[ticker].size
-                    )
-                    self.holdings.transaction[ticker].position = Order.LONG
-
-                short_pnl += pnl
-
-            elif (
-                self.holdings.transaction[ticker].position == Order.LONG
-                and executions.transaction[ticker].position == Order.LONG
-            ):
-
-                self.holdings.transaction[ticker].price = (
-                    self.holdings.transaction[ticker].get_amount()
-                    + executions.transaction[ticker].price
-                    * executions.transaction[ticker].size
-                ) / (
-                    self.holdings.transaction[ticker].size
-                    + executions.transaction[ticker].size
-                )
-                self.holdings.transaction[ticker].size += executions.transaction[
-                    ticker
-                ].size
-
-                fiat_pnl += executions.transaction[ticker].get_amount() * (-1)
-
-            elif (
-                self.holdings.transaction[ticker].position == Order.SHORT
-                and executions.transaction[ticker].position == Order.SHORT
-            ):
-
-                self.holdings.transaction[ticker].price = (
-                    self.holdings.transaction[ticker].get_amount()
-                    + executions.transaction[ticker].price
-                    * executions.transaction[ticker].size
-                ) / (
-                    self.holdings.transaction[ticker].size
-                    + executions.transaction[ticker].size
-                )
-                self.holdings.transaction[ticker].size += executions.transaction[
-                    ticker
-                ].size
-
-            elif self.holdings.transaction[ticker].position == Order.NONE:
-
-                self.holdings.transaction[ticker].price = executions.transaction[
-                    ticker
-                ].price
-                self.holdings.transaction[ticker].size += executions.transaction[
-                    ticker
-                ].size
-                self.holdings.transaction[ticker].position = executions.transaction[
-                    ticker
-                ].position
-
-                if executions.transaction[ticker].position == Order.LONG:
-                    fiat_pnl += executions.transaction[ticker].get_amount() * (-1)
-
-            if self.holdings.transaction[ticker].size == 0.0:
-                self.holdings.transaction[ticker].clear()
-
-        return long_pnl, short_pnl, fiat_pnl
 
     def trading(self, current_data: pd.DataFrame):
 
@@ -201,10 +37,14 @@ class Container:
             data=current_data, holding=self.holdings, fiat=self.fiat
         )
 
-        long_pnl, short_pnl, fiat_pnl = self.broker(executions)
+        long_pnl, short_pnl, fiat_pnl = self.broker.execute(self.holdings, executions)
 
         self.fiat += fiat_pnl
 
         long_asset, short_asset = self.holdings.calculate_asset(current_data)
 
-        return long_asset, short_asset, self.fiat, long_pnl, short_pnl
+        total_assets = self.fiat + long_asset - short_asset
+
+        turnover = self.broker.calculate_turnover(total_assets, executions)
+
+        return long_asset, short_asset, self.fiat, long_pnl, short_pnl, turnover

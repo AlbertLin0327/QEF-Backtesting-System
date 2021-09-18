@@ -20,9 +20,12 @@ def get_args():
     parser.add_argument(
         "--universe_file", required=True, help="Backtesting Universe Path Name"
     )
+    parser.add_argument(
+        "--save_file",
+        default=dt.datetime.now().strftime("%m-%d-%Y,%H:%M:%S"),
+        help="Historical Strategy",
+    )
 
     args = parser.parse_args()
-    args.start_date = dt.datetime.strptime(args.start_date, "%Y-%m-%d")
-    args.end_date = dt.datetime.strptime(args.end_date, "%Y-%m-%d")
 
     return args

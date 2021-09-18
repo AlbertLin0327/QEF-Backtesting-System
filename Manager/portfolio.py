@@ -1,5 +1,6 @@
 import matplotlib
 import sys
+import numpy as np
 
 from Lib import mean, square_deviation, stddev
 from Sandbox import Order, OrderBook, Holding
@@ -8,7 +9,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-class Broker:
+class PortfolioManager(object):
 
     # Parameters setting
     def __init__(self):
@@ -19,18 +20,20 @@ class Broker:
         self.long_pnl = []
         self.short_pnl = []
         self.daily_return = []
+        self.turnover = []
 
     # Appending valid trading date
     def setYear(self, date):
         self.years.append(date)
 
-    def run(self, long_asset, short_asset, total_fiat, long_pnl, short_pnl):
+    def run(self, long_asset, short_asset, total_fiat, long_pnl, short_pnl, turnover):
         # print(long_asset + short_asset + total_fiat)
         self.assets.append(total_fiat + long_asset + short_asset)
         self.long_pnl.append(long_pnl)
         self.short_pnl.append(short_pnl)
         self.long_asset.append(long_asset)
         self.short_asset.append(short_asset)
+        self.turnover.append(turnover)
         self.cal_daily_return()
 
     def cal_sharpe_ratio(self):
@@ -58,17 +61,17 @@ class Broker:
         plt.title(title)
         plt.xlabel("Time")
         plt.ylabel(ylabel)
-        years = self.years[-len(data):]
+        years = self.years[-len(data) :]
         # draw the fitting curve
         plt.plot(years, data)
 
         # plt.show()
         fig.savefig(path + "/" + title.replace(" ", "_"))
-    
+
     def plot_all(self, path):
         self.plot(self.long_pnl, path, "Long PnL", "PnL")
         self.plot(self.short_pnl, path, "Short PnL", "PnL")
-        self.plot(self.assets,path, "Total Assets", "Assets")
+        self.plot(self.assets, path, "Total Assets", "Assets")
         self.plot(
             (self.long_asset + np.cumsum(self.long_pnl)),
             path,
@@ -87,3 +90,4 @@ class Broker:
             "Daily Return",
             "Return",
         )
+        self.plot(self.turnover, path, "Turnover", "Turnover Rate")

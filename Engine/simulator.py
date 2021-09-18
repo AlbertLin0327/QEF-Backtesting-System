@@ -1,6 +1,6 @@
 import datetime as dt
 
-from Manager import Broker
+from Manager import PortfolioManager
 from Engine import Data
 import os
 import numpy as np
@@ -8,6 +8,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
 
 class Engine:
 
@@ -18,7 +19,7 @@ class Engine:
         start: dt.datetime,
         end: dt.datetime,
         sandbox,
-        manager: Broker,
+        manager: PortfolioManager,
     ):
         self.delta = dt.timedelta(days=1)
         self.data = data
@@ -45,13 +46,11 @@ class Engine:
                     total_fiat,
                     long_pnl,
                     short_pnl,
+                    turnover,
                 ) = self.sandbox.trading(current_data)
+
                 self.manager.run(
-                    long_asset, short_asset, total_fiat, long_pnl, short_pnl
+                    long_asset, short_asset, total_fiat, long_pnl, short_pnl, turnover
                 )
 
             current_date += self.delta
-        # path = "./image/" + dt.datetime.now().strftime("%m-%d-%Y_%H:%M:%S")
-        # os.mkdir(path)
-        self.manager.plot_all("./image")
-        print(f'sharpe ratio={self.manager.cal_sharpe_ratio()}')
