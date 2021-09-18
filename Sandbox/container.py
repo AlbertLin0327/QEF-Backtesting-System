@@ -1,12 +1,34 @@
+### Import necessary library ###
 import pandas as pd
 import datetime as dt
 import numpy as np
 
+### Import necessary object ###
 from Sandbox import Holding, Order, OrderBook, Broker
 
 
 class Container:
-    def __init__(self, strategy_filename: str, universe_filename):
+    """
+    The utility of Container:
+        1. Run the strategy
+        2. Bridge the data between strategy and the rest of the system
+    """
+
+    def __init__(self, strategy_filename: str, universe_filename: str) -> None:
+        """
+        Init function
+
+        Parameters
+        ----------
+        strategy_filename: str
+            The filename of the strategy (Without .py)
+        universe_filename: str
+            The name of the universe being tested
+
+        Returns
+        -------
+        None
+        """
 
         # import necessary libraries
         import importlib
@@ -23,7 +45,7 @@ class Container:
 
         self.Universe = pd.read_parquet(self.universe_path)
 
-        # Broker
+        # Initialized Broker
         self.broker = Broker()
 
         # Instance Variable
@@ -31,20 +53,37 @@ class Container:
 
         self.fiat = 100
 
-    def trading(self, current_data: pd.DataFrame):
+    def trading(self, current_data: pd.DataFrame) -> tuple:
+        """
+        The main function to execute strategy.
+        It will call "self.Strategy.trade" to initiate strategy.
 
+        Parameters
+        ----------
+        current_data: pd.DataFrame
+            Pass in the data of the universe of particular date
+
+        Returns
+        -------
+        None
+        """
+
+        # Initiate strategy and get the order from it
         executions = self.Strategy.trade(
             data=current_data, holding=self.holdings, fiat=self.fiat
         )
 
+        # Calculate the PnL of the order
         long_pnl, short_pnl, fiat_pnl = self.broker.execute(self.holdings, executions)
 
-        self.fiat += fiat_pnl
-
+        # Calculate the holding asset
         long_asset, short_asset = self.holdings.calculate_asset(current_data)
 
+        # Calculate current asset
+        self.fiat += fiat_pnl
         total_assets = self.fiat + long_asset - short_asset
 
+        # Calculate turnover
         turnover = self.broker.calculate_turnover(total_assets, executions)
 
         return long_asset, short_asset, self.fiat, long_pnl, short_pnl, turnover
