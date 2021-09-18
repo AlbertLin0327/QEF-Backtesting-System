@@ -21,6 +21,8 @@ class PortfolioManager(object):
         self.short_pnl = []
         self.daily_return = []
         self.turnover = []
+        self.annual_return = []
+        self.annual_sharpe_ratio = []
 
     # Appending valid trading date
     def setYear(self, date):
@@ -35,6 +37,9 @@ class PortfolioManager(object):
         self.short_asset.append(short_asset)
         self.turnover.append(turnover)
         self.cal_daily_return()
+        if (len(self.daily_return) % 252 == 0 and len(self.daily_return) != 0):
+            self.cal_annual_return()
+            self.cal_annual_sharpe_ratio()
 
     def cal_sharpe_ratio(self):
 
@@ -52,6 +57,30 @@ class PortfolioManager(object):
         if len(self.assets) > 2:
             daily_return = self.assets[-1] / self.assets[-2] - 1
             self.daily_return.append(daily_return)
+
+    def cal_total_return(self):
+        total_return = 1.0
+        for d in self.daily_return:
+            total_return *= d
+        return total_return - 1.0
+
+    def cal_annual_return(self):
+        annual_return = 1.0
+        l = len(self.annual_return) * 252
+        for i in range(l, l + 252):
+            annual_return *= self.daily_return[i]
+        self.annual_return.append(annual_return)
+    
+    def cal_annual_sharpe_ratio(self):
+        l = len(self.annual_sharpe_ratio) * 252
+        new_list = []
+        for i in range(l, l + 252):
+            new_list.append(self.daily_return[i])
+        r_p = mean(new_list)
+        theta_p = stddev(new_list)
+        sharpe_ratio = r_p / theta_p
+        self.annual_sharpe_ratio.append((252 ** 0.5) * sharpe_ratio)
+
 
     def plot(self, data, path, title, ylabel):
 
