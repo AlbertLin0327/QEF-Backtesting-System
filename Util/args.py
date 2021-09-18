@@ -17,6 +17,9 @@ def get_args():
     parser.add_argument(
         "--strategy_file", required=True, help="Backtesting Strategy File Name"
     )
+    parser.add_argument(
+        "--universe_file", required=True, help="Backtesting Universe Path Name"
+    )
 
     args = parser.parse_args()
     args.start_date = dt.datetime.strptime(args.start_date, "%Y-%m-%d")

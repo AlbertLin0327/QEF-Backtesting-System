@@ -12,6 +12,11 @@ class Data:
 
         # Read the file and transform to pandas.data_form
         data = pd.read_parquet(file_path)
+
+        data["adj_close_"] = pd.to_numeric(data["adj_close_"], downcast="float")
+
+        print(data)
+
         return data
 
     def fetch_all(self):
@@ -21,11 +26,13 @@ class Data:
 
         # Get all the price data
         while start_date <= end_date:
+
             try:
-                self.price_vol[start_date.strftime("%Y-%m-%d")] = _fetch(
-                    f"../Dataset/Universe/Taiwan_50/Price-Volume/"
+                self.price_vol[start_date.strftime("%Y-%m-%d")] = self._fetch(
+                    f"Dataset/Universe/Taiwan_50/Price-Volume/"
                     + start_date.strftime("%Y/%m/%d")
                 )
+
             except:
                 pass
             finally:

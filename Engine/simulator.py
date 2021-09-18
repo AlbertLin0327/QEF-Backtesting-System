@@ -30,13 +30,16 @@ class Engine:
         while current_date <= self.end_date:
 
             # Fetch the data
-            current_data = data.fetch_date(current_date)
+            current_data = self.data.fetch_date(current_date)
 
             if current_data is not None:
                 self.manager.setYear(current_date)
-                self.manager.run(self.sandbox.trading(current_data))
+                long_asset, short_asset, long_pnl, short_pnl = self.sandbox.trading(
+                    current_data
+                )
+                self.manager.run(long_asset, short_asset, long_pnl, short_pnl)
 
             current_date += self.delta
 
         # Plot the needed curve
-        self.manager.plot()
+        # self.manager.plot("../testing", "test", "none")

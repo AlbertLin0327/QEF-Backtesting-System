@@ -33,10 +33,10 @@ class Broker:
 
         # Get the return value from sandbox and maintain it
         prev_holding = self.current_holdings
-        self.current_holdings = current_holdings
-        self.current_holdings.calculate_asset()
-        # self.cal_PnL(prev_holding)
-        self.cal_daily_return()
+
+        print(long_asset, short_asset, long_pnL, short_pnl)
+
+        # self.cal_daily_return()
 
     def cal_sharpe_ratio(self):
 
@@ -57,83 +57,6 @@ class Broker:
 
     def cal_annual_return(self):
         return sum(self.tmp)
-
-    def cal_PnL(self, prev_holdings):
-
-        long_PnL, short_PnL, long_asset, short_asset = 0, 0, 0, 0
-
-        if prev_holdings != {}:
-
-            transaction_cost = 0
-
-            # Find all tickers and Calculate PnL
-            for ticker in prev_holdings:
-
-                # Do nothing if hold
-                if ticker not in self.OrderBook or self.OrderBook[ticker] == 0:
-                    continue
-
-                # Calculate PnL of previous short position
-                elif (
-                    prev_holdings[ticker].position == -1
-                    and self.OrderBook[ticker].position == 1
-                ):
-
-                    short_PnL += (
-                        prev_holdings[ticker].size
-                        * prev_holdings[ticker].position
-                        * (
-                            self.current_holding[ticker].price
-                            - prev_holdings[ticker].price
-                        )
-                    )
-
-                    # transaction_cost += abs(
-                    #     (holding[ticker]["amount"] - new_holding[ticker]["amount"])
-                    #     * new_holding[ticker]["price"]
-                    #     * TC_RATE
-                    # )
-
-                # Calculate PnL of previous long position
-                elif (
-                    prev_holdings[ticker].position == 1
-                    and self.OrderBook[ticker].position == -1
-                ):
-
-                    long_PnL += (
-                        prev_holdings[ticker].size
-                        * prev_holdings[ticker].position
-                        * (
-                            self.current_holding[ticker].price
-                            - prev_holdings[ticker].price
-                        )
-                    )
-
-                    # transaction_cost += abs(
-                    #     (holding[ticker]["amount"] - new_holding[ticker]["amount"])
-                    #     * new_holding[ticker]["price"]
-                    #     * TC_RATE
-                    # )
-
-                # Calculate Asset of previous long position
-                elif (
-                    prev_holdings[ticker].position == -1
-                    and self.OrderBook[ticker].position == 0
-                ):
-                    short_asset += prev_holdings[ticker].amount
-
-                # Calculate Asset of previous long position
-                elif (
-                    prev_holdings[ticker].position == 1
-                    and self.OrderBook[ticker].position == 0
-                ):
-                    long_asset += prev_holdings[ticker].amount
-
-            self.assets.append(long_PnL + short_PnL + long_asset + short_asset)
-            self.long_pnL.append(long_PnL)
-            self.short_pnl.append(short_PnL)
-            self.long_asset.append(long_PnL + long_asset)
-            self.short_asset.append(short_PnL + short_asset)
 
     def cal_daily_return(self):
         if len(self.assets) > 1 and self.total_assets != 0:

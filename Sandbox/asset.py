@@ -1,4 +1,5 @@
 import datetime as dt
+import pandas as pd
 
 
 class Order:
@@ -37,9 +38,9 @@ class Order:
 
     @ticker.setter
     def ticker(self, new_ticker):
-        if type(new_ticker) == str:
-            self._ticker = new_ticker
-        else:
+        try:
+            self._ticker = str(new_ticker)
+        except:
             raise TypeError("Order ticker needs to be str")
 
     @property
@@ -48,9 +49,9 @@ class Order:
 
     @size.setter
     def size(self, new_size):
-        if type(new_size) == float:
-            self._size = new_size
-        else:
+        try:
+            self._size = float(new_size)
+        except:
             raise TypeError("Order size needs to be float")
 
     @property
@@ -59,9 +60,9 @@ class Order:
 
     @price.setter
     def price(self, new_price):
-        if type(new_price) == float:
-            self._price = new_price
-        else:
+        try:
+            self._price = float(new_price)
+        except:
             raise TypeError("Order price needs to be float")
 
     @property
@@ -128,3 +129,26 @@ class OrderBook:
 
         else:
             raise TypeError("The order_list argument should be a list of Class Order")
+
+
+class Holding(OrderBook):
+    def __init__(self, order_list: list, universe: pd.DataFrame, date: dt.date):
+        def fill_void():
+            for ticker in universe["ticker"]:
+                if ticker not in self.transaction:
+                    self.transaction[ticker] = Order(ticker=ticker, date=date)
+
+        super().__init__(order_list)
+        fill_void()
+
+    def calculate_asset(self) -> tuple:
+        long_asset, short_asset = 0.0, 0.0
+
+        for ticker in self.transaction:
+            if self.transaction[ticker].position == Order.LONG:
+                long_asset += self.transaction[ticker].get_amount()
+
+            elif self.transaction[ticker].position == Order.SHORT:
+                short_asset += self.transaction[ticker].get_amount()
+
+        return long_asset, short_asset

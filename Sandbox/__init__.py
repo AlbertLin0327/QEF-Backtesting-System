@@ -1,11 +1,7 @@
 # __init__.py
 
-
-# order.py
-from Sandbox.order import Order, OrderBook
+# asset.py
+from Sandbox.asset import Order, OrderBook, Holding
 
 # container.py
 from Sandbox.container import Container
-
-# holdings.py
-from Sandbox.holding import Holding

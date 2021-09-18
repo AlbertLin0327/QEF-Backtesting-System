@@ -2,8 +2,7 @@ import pandas as pd
 import datetime as dt
 import numpy as np
 
-from order import Order, OrderBook
-from ...Util.Universe.Taiwan_50 import TAIWAN_50
+from Sandbox import Order, OrderBook
 
 ### Constant ###
 TC_RATE = 0.0
@@ -15,7 +14,7 @@ class Strategy:
     # Parameters setting
     def __init__(self):
         self.ticker_window = {}
-        self.period = 21
+        self.period = 5
         self.betting = 100000
 
     # Find the price window
@@ -57,7 +56,7 @@ class Strategy:
         return cum_ret
 
     # Main trading function
-    def trading(self, data, holding):
+    def trade(self, data, holding):
 
         # Fill the window
         self.window(data)
@@ -71,10 +70,9 @@ class Strategy:
         short_list = {}
         long_list = {}
 
-        porportion = len(cum_ret) // 10
+        porportion = len(cum_ret) // 2
 
         if porportion > 0:
-            # given ranking as weighted
             for i in range(porportion):
                 short_list[cum_ret[-(i + 1)][1]] = porportion - i
                 long_list[cum_ret[i][1]] = porportion - i
@@ -87,23 +85,18 @@ class Strategy:
             if ticker not in self.ticker_window.keys() or porportion == 0:
                 continue
 
-            if ticker in short_list and (
-                ticker not in holding or holding[ticker]["position"] > 0
-            ):
+            if ticker in short_list:
                 dicision[ticker] = -1
-                
-                short_position += np.exp(short_list[ticker])
+                short_position += short_list[ticker]
 
-            elif ticker in long_list and (
-                ticker not in holding or holding[ticker]["position"] < 0
-            ):
+            elif ticker in long_list:
                 dicision[ticker] = 1
-                long_position += np.exp(long_list[ticker])
+                long_position += long_list[ticker]
 
             else:
                 dicision[ticker] = 0
 
-        new_holding = {}
+        new_holding = []
 
         if dicision != {} and not (short_position == 0 and long_position == 0):
 
@@ -111,34 +104,33 @@ class Strategy:
             for ticker in dicision:
                 price = data.loc[data["identifier"] == ticker]["adj_close_"].values[0]
 
-                # Keep same position if hold
-                if dicision[ticker] == 0:
-                    if ticker in holding:
-                        new_holding[ticker] = holding[ticker]
-                    else:
-                        new_holding[ticker] = {
-                            "price": price,
-                            "amount": 0,
-                            "position": 0,
-                        }
+                # Short sell and make the amout negative
+                if dicision[ticker] == -1:
 
-                # Short sell and make the amout negative with non-equal-weighted (softmax)
-                elif dicision[ticker] == -1:
-
-                    new_holding[ticker] = {
-                        "price": price,
-                        "amount": -(self.betting * np.exp(short_list[ticker]) / short_position) / price,
-                        "position": -1,
-                    }
+                    new_holding.append(
+                        Order(
+                            ticker=ticker,
+                            size=(self.betting / short_position * short_list[ticker]),
+                            price=price,
+                            position=Order.SHORT,
+                        )
+                    )
 
                 # Long an stock
                 elif dicision[ticker] == 1:
 
-                    new_holding[ticker] = {
-                        "price": price,
-                        "amount": (self.betting * np.exp(long_list[ticker]) / long_position ) / price,
-                        "position": 1,
-                    }
+                    new_holding.append(
+                        Order(
+                            ticker=ticker,
+                            size=(self.betting / short_position * long_list[ticker]),
+                            price=price,
+                            position=Order.LONG,
+                        )
+                    )
+
+            new_holding = OrderBook(new_holding)
+
         else:
             new_holding = holding
-        return new_holding, dicision
+
+        return new_holding
