@@ -18,8 +18,6 @@ def main():
 
     broker = Broker()
 
-    print(data)
-
     sandbox = Container(args.strategy_file, args.universe_file)
 
     engine = Engine(data, start, end, sandbox, broker)

@@ -34,10 +34,16 @@ class Engine:
 
             if current_data is not None:
                 self.manager.setYear(current_date)
-                long_asset, short_asset, long_pnl, short_pnl = self.sandbox.trading(
-                    current_data
+                (
+                    long_asset,
+                    short_asset,
+                    total_fiat,
+                    long_pnl,
+                    short_pnl,
+                ) = self.sandbox.trading(current_data)
+                self.manager.run(
+                    long_asset, short_asset, total_fiat, long_pnl, short_pnl
                 )
-                self.manager.run(long_asset, short_asset, long_pnl, short_pnl)
 
             current_date += self.delta
 

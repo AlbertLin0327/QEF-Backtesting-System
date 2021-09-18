@@ -15,8 +15,6 @@ class Data:
 
         data["adj_close_"] = pd.to_numeric(data["adj_close_"], downcast="float")
 
-        print(data)
-
         return data
 
     def fetch_all(self):

@@ -26,9 +26,11 @@ class Container:
         # Instance Variable
         self.holdings = Holding([], self.Universe, dt.datetime.now().date)
 
+        self.fiat = 100
+
     def broker(self, executions: OrderBook):
 
-        long_pnl, short_pnl = 0.0, 0.0
+        long_pnl, short_pnl, fiat_pnl = 0.0, 0.0, 0.0
 
         for ticker in executions.transaction:
 
@@ -46,6 +48,11 @@ class Container:
                         - self.holdings.transaction[ticker].price
                     ) * executions.transaction[ticker].size
 
+                    fiat_pnl += (
+                        executions.transaction[ticker].price
+                        * executions.transaction[ticker].size
+                    )
+
                     self.holdings.transaction[ticker].price = (
                         self.holdings.transaction[ticker].get_amount()
                         - executions.transaction[ticker].price
@@ -64,6 +71,11 @@ class Container:
                         - self.holdings.transaction[ticker].price
                     ) * self.holdings.transaction[ticker].size
 
+                    fiat_pnl += (
+                        executions.transaction[ticker].price
+                        * self.holdings.transaction[ticker].size
+                    )
+
                     self.holdings.transaction[ticker].price = executions.transaction[
                         ticker
                     ].price
@@ -73,7 +85,6 @@ class Container:
                     )
                     self.holdings.transaction[ticker].position = Order.SHORT
 
-                print(pnl)
                 long_pnl += pnl
 
             elif (
@@ -89,6 +100,8 @@ class Container:
                         self.holdings.transaction[ticker].price
                         - executions.transaction[ticker].price
                     ) * executions.transaction[ticker].size
+
+                    fiat_pnl += pnl
 
                     self.holdings.transaction[ticker].price = (
                         self.holdings.transaction[ticker].get_amount()
@@ -107,6 +120,13 @@ class Container:
                         self.holdings.transaction[ticker].price
                         - executions.transaction[ticker].price
                     ) * self.holdings.transaction[ticker].size
+
+                    fiat_pnl += (
+                        self.holdings.transaction[ticker].price
+                        * self.holdings.transaction[ticker].size
+                        - executions.transaction[ticker].price
+                        * executions.transaction[ticker].size
+                    )
 
                     self.holdings.transaction[ticker].price = executions.transaction[
                         ticker
@@ -136,6 +156,8 @@ class Container:
                     ticker
                 ].size
 
+                fiat_pnl += executions.transaction[ticker].get_amount() * (-1)
+
             elif (
                 self.holdings.transaction[ticker].position == Order.SHORT
                 and executions.transaction[ticker].position == Order.SHORT
@@ -155,8 +177,6 @@ class Container:
 
             elif self.holdings.transaction[ticker].position == Order.NONE:
 
-                print(type(executions.transaction[ticker].price))
-
                 self.holdings.transaction[ticker].price = executions.transaction[
                     ticker
                 ].price
@@ -167,17 +187,24 @@ class Container:
                     ticker
                 ].position
 
+                if executions.transaction[ticker].position == Order.LONG:
+                    fiat_pnl += executions.transaction[ticker].get_amount() * (-1)
+
             if self.holdings.transaction[ticker].size == 0.0:
                 self.holdings.transaction[ticker].clear()
 
-        return long_pnl, short_pnl
+        return long_pnl, short_pnl, fiat_pnl
 
     def trading(self, current_data: pd.DataFrame):
 
-        executions = self.Strategy.trade(data=current_data, holding=self.holdings)
+        executions = self.Strategy.trade(
+            data=current_data, holding=self.holdings, fiat=self.fiat
+        )
 
-        long_pnl, short_pnl = self.broker(executions)
+        long_pnl, short_pnl, fiat_pnl = self.broker(executions)
 
-        long_asset, short_asset = self.holdings.calculate_asset()
+        self.fiat += fiat_pnl
 
-        return long_asset, short_asset, long_pnl, short_pnl
+        long_asset, short_asset = self.holdings.calculate_asset(current_data)
+
+        return long_asset, short_asset, self.fiat, long_pnl, short_pnl

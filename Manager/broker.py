@@ -29,12 +29,13 @@ class Broker:
     def setYear(self, date):
         self.years.append(date)
 
-    def run(self, long_asset, short_asset, long_pnL, short_pnl):
+    def run(self, long_asset, short_asset, total_fiat, long_pnL, short_pnl):
 
         # Get the return value from sandbox and maintain it
         prev_holding = self.current_holdings
 
-        print(long_asset, short_asset, long_pnL, short_pnl)
+        # print(long_asset, short_asset, long_pnL, short_pnl)
+        print(long_asset + short_asset + total_fiat)
 
         # self.cal_daily_return()
 

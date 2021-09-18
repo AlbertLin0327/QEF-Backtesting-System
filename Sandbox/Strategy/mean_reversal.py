@@ -15,7 +15,6 @@ class Strategy:
     def __init__(self):
         self.ticker_window = {}
         self.period = 5
-        self.betting = 100000
 
     # Find the price window
     def window(self, data):
@@ -56,7 +55,9 @@ class Strategy:
         return cum_ret
 
     # Main trading function
-    def trade(self, data, holding):
+    def trade(self, data, holding, fiat):
+
+        betting = fiat / 10
 
         # Fill the window
         self.window(data)
@@ -110,7 +111,10 @@ class Strategy:
                     new_holding.append(
                         Order(
                             ticker=ticker,
-                            size=(self.betting / short_position * short_list[ticker]),
+                            size=(
+                                (betting / price)
+                                * (short_list[ticker] / short_position)
+                            ),
                             price=price,
                             position=Order.SHORT,
                         )
@@ -122,7 +126,9 @@ class Strategy:
                     new_holding.append(
                         Order(
                             ticker=ticker,
-                            size=(self.betting / short_position * long_list[ticker]),
+                            size=(
+                                (betting / price) * (long_list[ticker] / long_position)
+                            ),
                             price=price,
                             position=Order.LONG,
                         )

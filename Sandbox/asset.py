@@ -141,14 +141,24 @@ class Holding(OrderBook):
         super().__init__(order_list)
         fill_void()
 
-    def calculate_asset(self) -> tuple:
+    def calculate_asset(self, current_data) -> tuple:
         long_asset, short_asset = 0.0, 0.0
 
         for ticker in self.transaction:
             if self.transaction[ticker].position == Order.LONG:
-                long_asset += self.transaction[ticker].get_amount()
+                long_asset += (
+                    current_data[current_data["identifier"] == ticker][
+                        "adj_close_"
+                    ].values[0]
+                    * self.transaction[ticker].size
+                )
 
             elif self.transaction[ticker].position == Order.SHORT:
-                short_asset += self.transaction[ticker].get_amount()
+                short_asset += (
+                    self.transaction[ticker].price
+                    - current_data[current_data["identifier"] == ticker][
+                        "adj_close_"
+                    ].values[0]
+                ) * self.transaction[ticker].size
 
         return long_asset, short_asset
