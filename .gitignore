@@ -3,7 +3,6 @@
 # Sensetive Data
 /raw_data
 /Dataset
-
-# exception
-!Dataset/.gitkeep 
-
+/testing/image
+.vscode
+**/__pycache__
