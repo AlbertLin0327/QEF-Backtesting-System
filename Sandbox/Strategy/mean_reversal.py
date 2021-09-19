@@ -4,7 +4,7 @@ import datetime as dt
 import numpy as np
 
 ### Import necessary object ###
-from Sandbox import Order, OrderBook
+from Sandbox import Order, OrderBook, Holding
 
 ### Constant ###
 from Sandbox import TC_RATE
@@ -19,7 +19,7 @@ class Strategy:
         self.period = 5
 
     # Find the price window
-    def window(self, data):
+    def window(self, data: pd.DataFrame):
 
         # Go through all entry
         for _, row in data.iterrows():
@@ -68,7 +68,9 @@ class Strategy:
         return cumulative_return
 
     # Main trading function
-    def trade(self, data, holding, fiat):
+    def trade(
+        self, data: pd.DataFrame, holding: Holding, fiat: float, current_date: dt.date
+    ) -> OrderBook:
 
         # The size of each betting
         betting = fiat / 10
