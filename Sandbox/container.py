@@ -65,7 +65,18 @@ class Container:
 
         Returns
         -------
-        None
+        long_asset: float
+            The current value of long position
+        short_asset: float
+            The current value of short position (initial price - current price)
+        self.fiat: float
+            The current amount of fiat
+        long_pnl: float
+            The PnL aquired by a long position
+        short_pnl: float
+            The PnL aquired by a short position
+        turnover: float
+            The turnover rate of the stock
         """
 
         # Initiate strategy and get the order from it

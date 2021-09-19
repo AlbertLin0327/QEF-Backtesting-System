@@ -1,8 +1,15 @@
+### Import necessary library ###
 import datetime as dt
 import pandas as pd
 
 
 class Order:
+    """
+    The utility of Order:
+        1. Record order or holding information
+    """
+
+    # Necessary enum for self.position
     LONG = 1
     NONE = 0
     SHORT = -1
@@ -15,12 +22,36 @@ class Order:
         price: float = 0.0,
         position: int = 0,
     ):
+
+        """
+        Init function
+
+        Parameters
+        ----------
+        date: dt.date = dt.datetime.now().date()
+            The date of the order/ position being created
+        ticker: str = ""
+            The identifier of the ticker
+        size: float = 0.0
+            The size of the order/ position
+        price: float = 0.0
+            The mean price of the order/ position
+        position: int = 0
+            The position (Long/ Short) of the order/ position
+
+        Returns
+        -------
+        None
+        """
+
+        # Instance Variable
         self._date = date
         self._ticker = ticker
         self._size = size
         self._price = price
         self._position = position
 
+    # Setter and getter method to make sure the instance variables are in correct type
     @property
     def date(self):
         return self._date
@@ -76,9 +107,11 @@ class Order:
         else:
             raise TypeError("Order price needs to be enum LONG, SHORT, or NONE")
 
+    # Calculate current amount of the order/ position
     def get_amount(self):
         return self.size * self.price
 
+    # Clear current order/ position state
     def clear(self):
         self._size = 0.0
         self._price = 0.0
@@ -86,79 +119,146 @@ class Order:
 
 
 class OrderBook:
-    def __init__(self, order_list: list = []):
-        def _convert_order_list(order_list):
-            _new_transaction = {}
+    """
+    The utility of OrderBook:
+        1. Record whole orderbook of current order information
+    """
 
+    def __init__(self, order_list: list = []):
+        """
+        Init function
+
+        Parameters
+        ----------
+        order_list: list = []
+            The list of order class being placed, [Order]
+
+        Returns
+        -------
+        None
+        """
+
+        # Inner function to convert order list into dictionary
+        def _convert_order_list(order_list: list):
+            _new_equity = {}
+
+            # Convert the table
             try:
                 for order in order_list:
-                    _new_transaction[order.ticker] = order
-
+                    _new_equity[order.ticker] = order
             except:
                 raise Exception(
                     "The order_list argument should be a list of Class Order"
                 )
 
-            return _new_transaction
+            return _new_equity
 
-        self._transaction = _convert_order_list(order_list)
+        # Instance Variable
+        self._equity = _convert_order_list(order_list)
 
     @property
-    def transaction(self):
-        return self._transaction
+    def equity(self):
+        return self._equity
 
-    @transaction.setter
-    def transaction(self, new_transaction):
-        if type(new_transaction) == list:
+    # Setter and getter method to make sure the instance variables are in correct type
+    @equity.setter
+    def equity(self, new_equity):
+        if type(new_equity) == list:
 
+            # Same as the function defined in the init function
             def _convert_order_list(order_list):
-                _new_transaction = {}
+                _new_equity = {}
 
                 try:
                     for order in order_list:
-                        _new_transaction[order.ticker] = order
-
+                        _new_equity[order.ticker] = order
                 except:
                     raise Exception(
                         "The order_list argument should be a list of Class Order"
                     )
 
-                return _new_transaction
+                return _new_equity
 
-            self._transaction = _convert_order_list(new_transaction)
+            self._equity = _convert_order_list(new_equity)
 
         else:
             raise TypeError("The order_list argument should be a list of Class Order")
 
 
 class Holding(OrderBook):
+    """
+    Current Holding inherit from OrderBook object:
+        1. Track current holding position
+    """
+
     def __init__(self, order_list: list, universe: pd.DataFrame, date: dt.date):
+        """
+        Init function
+
+        Parameters
+        ----------
+        order_list: list = []
+            The list of order class being placed, [Order]
+        universe: pd.DataFrame
+            The universe where the backtesting is taking place on
+        date: dt.date
+            The current date of backtesting
+
+        Returns
+        -------
+        None
+        """
+
+        # Inner function to fill void fields
         def fill_void():
             for ticker in universe["ticker"]:
-                if ticker not in self.transaction:
-                    self.transaction[ticker] = Order(ticker=ticker, date=date)
+                if ticker not in self.equity:
+                    self.equity[ticker] = Order(ticker=ticker, date=date)
 
+        # Initialized instance variable
         super().__init__(order_list)
+
+        # Execute fill_void
         fill_void()
 
-    def calculate_asset(self, current_data) -> tuple:
+    def calculate_asset(self, current_data: pd.DataFrame) -> tuple:
+        """
+        Calculate current long and short position values
+
+        Parameters
+        ----------
+        current_data: pd.DataFrame
+            current price_vol data
+
+        Returns
+        -------
+        long_asset:float
+            Current long position value
+        short_asset:float
+            Current short position value
+        """
+
         long_asset, short_asset = 0.0, 0.0
 
-        for ticker in self.transaction:
-            if self.transaction[ticker].position == Order.LONG:
+        # Iterate through all asset
+        for ticker in self.equity:
+
+            # The value of long asset is the face value times bidding size
+            if self.equity[ticker].position == Order.LONG:
                 long_asset += (
                     current_data[current_data["identifier"] == ticker][
                         "adj_close_"
                     ].values[0]
-                    * self.transaction[ticker].size
+                    * self.equity[ticker].size
                 )
 
-            elif self.transaction[ticker].position == Order.SHORT:
+            # The values of short asset is (short - current price) times bidding size
+            elif self.equity[ticker].position == Order.SHORT:
                 short_asset += (
-                    self.transaction[ticker].price
+                    self.equity[ticker].price
                     - current_data[current_data["identifier"] == ticker][
                         "adj_close_"
                     ].values[0]
-                ) * self.transaction[ticker].size
+                ) * self.equity[ticker].size
 
         return long_asset, short_asset

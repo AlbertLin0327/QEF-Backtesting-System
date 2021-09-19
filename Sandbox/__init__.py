@@ -8,3 +8,6 @@ from Sandbox.broker import Broker
 
 # container.py
 from Sandbox.container import Container
+
+# Constant
+TC_RATE = 0.01

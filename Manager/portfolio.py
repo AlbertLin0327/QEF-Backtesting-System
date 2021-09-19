@@ -1,13 +1,15 @@
 ### Import necessary library ###
 import matplotlib
 import datetime as dt
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+import numpy as np
 
 ### Import necessary object ###
 from Lib import mean, square_deviation, stddev
 from Sandbox import Order, OrderBook, Holding
+
+### Set matplotlib ###
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 
 class PortfolioManager(object):
@@ -17,6 +19,7 @@ class PortfolioManager(object):
         2. Calculate return and sharpe ratio
         3. Plot the curve
     """
+
     # Parameters setting
     def __init__(self) -> None:
         """
@@ -75,13 +78,20 @@ class PortfolioManager(object):
         """
         self.valid_date.append(date)
 
-    def run(self, long_asset: float, short_asset: float, total_fiat: float, 
-            long_pnl: float, short_pnl: float, turnover: float):
+    def run(
+        self,
+        long_asset: float,
+        short_asset: float,
+        total_fiat: float,
+        long_pnl: float,
+        short_pnl: float,
+        turnover: float,
+    ):
         """
         The main function to execute manager.
         It will save all the passed arguments and calculate daily return
 
-        Parameters: 
+        Parameters:
         ----------
         long_asset: float
             Pass in the current holding long assets' percentage to the initial fiat
@@ -93,7 +103,7 @@ class PortfolioManager(object):
             Pass in the current long pnl
         short_pnl: float
             Pass in the current short pnl
-        turnover: float   
+        turnover: float
             Pass in today's turnover
 
         Returns
@@ -116,7 +126,7 @@ class PortfolioManager(object):
         """
         Calculate the total sharpe ratio of the portfolio
 
-        Parameters: 
+        Parameters:
         ----------
         None
 
@@ -127,7 +137,7 @@ class PortfolioManager(object):
 
         """
 
-        # Sharpe ration = (expected porfolio return - risk free rate) / porfolio standard deviation
+        # Sharpe ratio = (expected porfolio return - risk free rate) / porfolio standard deviation
         r_p = mean(self.daily_return)
         theta_p = stddev(self.daily_return)
         sharpe_ratio = r_p / theta_p
@@ -139,7 +149,7 @@ class PortfolioManager(object):
         """
         Calculate the daily return of the portfolio
 
-        Parameters: 
+        Parameters:
         ----------
         None
 
@@ -160,7 +170,7 @@ class PortfolioManager(object):
         """
         Calculate the total return of the portfolio
 
-        Parameters: 
+        Parameters:
         ----------
         None
 
@@ -185,7 +195,7 @@ class PortfolioManager(object):
         """
         Calculate the annual return of the portfolio
 
-        Parameters: 
+        Parameters:
         ----------
         None
 
@@ -205,13 +215,13 @@ class PortfolioManager(object):
 
             self.annual_return.append(annual_return - 1.0)
 
-        return self.annual_return - 1.0
+        return self.annual_return
 
     def cal_annual_sharpe_ratio(self) -> float:
         """
         Calculate the annual sharpe ratio of the portfolio
 
-        Parameters: 
+        Parameters:
         ----------
         None
 
@@ -237,10 +247,10 @@ class PortfolioManager(object):
         """
         Plot the curve of the given data with title and ylabel
         Save the figure with the given path
-        Parameters: 
+        Parameters:
         ----------
         data: list
-            the data passed in to be plot 
+            the data passed in to be plot
         path: str
             the path the figure to be saved
         title: str
@@ -252,7 +262,7 @@ class PortfolioManager(object):
         None
 
         """
-        
+
         fig = plt.figure(figsize=(10, 10))
 
         # plot the given data curve
@@ -271,14 +281,14 @@ class PortfolioManager(object):
         """
         Plot all needed figure
 
-        Parameters: 
+        Parameters:
         ----------
         path: str
             the directory that all the figure are going to be saved
 
         Returns
         -------
-        None 
+        None
 
         """
 
