@@ -30,10 +30,9 @@ class Container:
         None
         """
 
-        # import necessary libraries
+        # Import Strategy file
         import importlib
 
-        # Import Strategy file
         self.strategy_path = "Sandbox.Strategy." + strategy_filename
 
         self.Strategy = getattr(
@@ -48,9 +47,10 @@ class Container:
         # Initialized Broker
         self.broker = Broker()
 
-        # Instance Variable
+        # current equity holdings
         self.holdings = Holding([], self.Universe, dt.datetime.now().date)
 
+        # current fiat holdings
         self.fiat = 100
 
     def trading(self, current_data: pd.DataFrame) -> tuple:
