@@ -3,12 +3,15 @@
 ![Issue](https://img.shields.io/github/issues/AlbertLin0327/QEF-Backtesting-System)
 ![Commit](https://img.shields.io/github/last-commit/AlbertLin0327/QEF-Backtesting-System)
   
+
 #### This is a Quantitative Evaluation Framework written in Python. Traders can gain insight into the effectiveness of an idea without risking funds in trading accounts through the QEF-Backtesting system.    
    
 ## Prerequisites   
 1. Fork or clone the repository.   
    
+
 2. Downloads the data provided in the QEF shared folders and rename it as *raw_data*. The folder structure is provided in the following for clarification.   
+
 ```
 .
 |
@@ -22,6 +25,7 @@
   
 ## Preliminary Setup 
 1. You are advised to install Python dependencies as listed. But you can also maintain dependencies on your own.   
+
 ```
 pip3 install -r dependency.txt
 ```
