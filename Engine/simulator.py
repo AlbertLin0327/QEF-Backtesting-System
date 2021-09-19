@@ -92,7 +92,7 @@ class Engine:
                     long_pnl,
                     short_pnl,
                     turnover,
-                ) = self.sandbox.trading(current_data)
+                ) = self.sandbox.trading(current_data, current_date)
 
                 # Feed to Portfolio Manager
                 self.manager.run(

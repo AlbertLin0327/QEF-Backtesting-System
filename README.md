@@ -8,7 +8,7 @@
 ## Prerequisites   
 1. Fork or clone the repository.   
    
-2. Downloads the data provided in the QEF shared folders and rename it as "raw_data". The folder structure is provided in the following for clarification.   
+2. Downloads the data provided in the QEF shared folders and rename it as *raw_data*. The folder structure is provided in the following for clarification.   
 ```
 .
 |
@@ -19,6 +19,7 @@
 |--- Util
     |--- data-processing.py
 ```   
+  
 ## Preliminary Setup 
 1. You are advised to install Python dependencies as listed. But you can also maintain dependencies on your own.   
 ```
@@ -29,14 +30,14 @@ or
 python3 -m pip install -r dependency.txt
 ```
    
-2. Run the data-procesing_0050.py (or other data-processing python script) to process the raw_data and store them into Dataset. Remeber to execute it under the folder Util.
+2. Run the *data-procesing_0050.py* (or other data-processing python script) to process the *raw_data* and store them into *Dataset*. Remeber to execute it under the folder *Util*.
 ```
 cd Util
 python3 data-processing_0050.py
 ```   
-
+  
 ## Run Main Program
-1. To run the main program, you have to first local in "QEF-Backtesting-System" folder.  
+1. To run the main program, you have to first local in *QEF-Backtesting-System* folder.  
 
 2. The usage of the main program:  
 ```
@@ -47,34 +48,34 @@ python3 main.py --start-date START_DATE --end-date END_DATE
   
 The (optional) arguments are explained as following:  
 ```  
-  -h, --help
-    show this help message and exit  
+-h, --help
+        show this help message and exit  
   
-  --start-date START_DATE  
+--start-date START_DATE  
         Backtesting Strating Time, fromat: YYYY-mm-dd  
   
-  --end-date END_DATE     
+--end-date END_DATE     
         Backtesting Ending Time, fromat: YYYY-mm-dd  
       
-  --strategy_file STRATEGY_FILE
+--strategy_file STRATEGY_FILE
         Backtesting Strategy File Name (withou .py)
 
-  --universe_file UNIVERSE_FILE  
+--universe_file UNIVERSE_FILE  
         Backtesting Universe Path Name  
 
-  --save_file SAVE_FILE
+--save_file SAVE_FILE
         The root repository to store your result in historicla_strategy
 ```  
-
+  
 For example, you can use the following command to see the result of the given duration with strategy and universe. 
 ``` 
 python3 main.py --start-date 2019-01-01 --end-date 2019-3-31 --strategy_file mean_reversal --universe_file Taiwan_50
 ```
-  
-2. The result will be stored in "historical_strategy" file with default file name the time of execution. Also, the images, args.txt, strategy, and ratio are store to examine the result.  
+   
+3. The result will be stored in *historical_strategy* file with default file name the time of execution. Also, the *images*, *args.txt*, *strategy*, and *ratio.csv* are store to examine the result.  
   
 ## Strategy Development  
-To develope a new strategy, you basically need to create a file with a Strategy class. The rules a deliberate on following context.  
+To develope a new strategy, you basically need to create a file with a **Strategy** class. The rules a deliberate on following context.  
 
 1. The strategy file must to have the following structure:
 ```  
@@ -88,9 +89,9 @@ class Strategy:
 
         return newOrderBook
 ```
-2. The Engine will call Strategy.trade and pass in current price volume data, current holding, current fiat possessions, and current date.  
+2. The Engine will call **Strategy.trade** and pass in current price volume data, current holding, current fiat possessions, and current date.  
   
-3. The price volume data is passed in as a pd.Dataframe as following:  
+3. The price volume data is passed in as a *pd.Dataframe* as following:  
 ```
 >> df.head(5)
 
@@ -119,12 +120,12 @@ __null_dask_index__
 4                           True 2021-01-03 03:26:31.129308+00:00  
 ```
    
-4. The trade function will return the OrderBook and the system will handle the rest.  
+4. The trade function will return the *OrderBook* and the system will handle the rest.  
   
 ## Universe Development  
 There are mainly two ways to develop the universe. 
-1. Completely rewrites the data-processing.py and make sure to store the result in Dataset/Universe file.  
-2. The second ways is to gather the ticker of your universe and then put it in Util/parameters.py. Then, import them in data-processing.py  
+1. Completely rewrites the *data-processing.py* and make sure to store the result in *Dataset/Universe* file.  
+2. The second ways is to gather the ticker of your universe and then put it in *Util/parameters.py*. Then, import them in *data-processing.py*. 
   
 ## Additional Information
 The main structure is represent as below:  

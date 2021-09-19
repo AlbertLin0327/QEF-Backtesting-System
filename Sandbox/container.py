@@ -53,7 +53,7 @@ class Container:
         # current fiat holdings
         self.fiat = 100
 
-    def trading(self, current_data: pd.DataFrame) -> tuple:
+    def trading(self, current_data: pd.DataFrame, date: dt.date) -> tuple:
         """
         The main function to execute strategy.
         It will call "self.Strategy.trade" to initiate strategy.
@@ -62,6 +62,8 @@ class Container:
         ----------
         current_data: pd.DataFrame
             Pass in the data of the universe of particular date
+        date: dt.date
+            Current date
 
         Returns
         -------
@@ -81,7 +83,7 @@ class Container:
 
         # Initiate strategy and get the order from it
         executions = self.Strategy.trade(
-            data=current_data, holding=self.holdings, fiat=self.fiat
+            data=current_data, holding=self.holdings, fiat=self.fiat, current_date=date
         )
 
         # Calculate the PnL of the order
